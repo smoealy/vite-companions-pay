@@ -9,7 +9,7 @@ import EarnTokensCard from '@/components/dashboard/EarnTokensCard';
 import ActivityList from '@/components/dashboard/ActivityList';
 import RewardNotification from '@/components/dashboard/RewardNotification';
 import { useRewards } from '@/hooks/useRewards';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from "../../../contexts/UserContext";
 import { incrementBalance } from '@/utils/firestoreService';
 
 const DashboardContent: React.FC = () => {
