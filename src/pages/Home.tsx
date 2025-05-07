@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui-components/Logo';
 import { motion } from 'framer-motion';
-import { useUser } from '@/contexts/UserContext';
-
+import { useUser } from "../../contexts/UserContext";
 const Home = () => {
   const navigate = useNavigate();
   const { user, loading } = useUser();
