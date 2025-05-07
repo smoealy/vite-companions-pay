@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowUpDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from "../../../contexts/UserContext";
 import { getUserActivities, ActivityLog } from '@/utils/firestoreService';
 
 interface ActivityListProps {
