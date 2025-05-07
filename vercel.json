@@ -7,10 +7,7 @@
     }
   ],
   "routes": [
-    // if you *do* have serverless functions under /api:
     { "src": "/api/(.*)", "dest": "/api/$1" },
-
-    // catch-all for your SPA
     { "src": "/(.*)",     "dest": "/index.html" }
   ],
   "headers": [
