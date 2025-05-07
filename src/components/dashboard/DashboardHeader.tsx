@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui-components/Logo';
 import { ConnectButton } from '@/walletConnect';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from "../../../contexts/UserContext";
 
 const DashboardHeader: React.FC = () => {
   const navigate = useNavigate();
