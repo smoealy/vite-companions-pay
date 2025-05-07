@@ -6,7 +6,7 @@ import Logo from '@/components/ui-components/Logo';
 import { motion } from 'framer-motion';
 import { signInWithGoogle } from '@/auth';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/contexts/UserContext';
+import { useUser } from "../../contexts/UserContext";
 import Footer from '@/components/ui-components/Footer';
 
 const Login = () => {
