@@ -15,7 +15,6 @@
     }
   ],
   "env": {
-    "STRIPE_SECRET_KEY": "@stripe_secret_key",
     "VITE_FIREBASE_API_KEY": "@vite_firebase_api_key",
     "VITE_FIREBASE_AUTH_DOMAIN": "@vite_firebase_auth_domain",
     "VITE_FIREBASE_PROJECT_ID": "@vite_firebase_project_id",
