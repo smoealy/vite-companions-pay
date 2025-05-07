@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { useUser } from "@/contexts/UserContext";
+import { useUser } from "../../../contexts/UserContext";
+
 import { Button } from "@/components/ui/button";
 import { storage } from "@/firebaseConfig";
 import { useToast } from "@/hooks/use-toast";
