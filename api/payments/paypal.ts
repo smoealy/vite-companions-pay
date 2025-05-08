@@ -1,15 +1,20 @@
-// File: api/payments/paypal.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Change to live endpoint for production
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Use 'https://api-m.paypal.com' for production
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
-  const { amount, userId } = req.body;
+  const { amount, uid, email } = req.body;
+
+  if (!amount || !uid || !email) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
 
   try {
     // Step 1: Get access token
@@ -23,8 +28,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const { access_token } = await tokenRes.json();
+    if (!access_token) throw new Error('Unable to get PayPal access token');
 
-    // Step 2: Create order
+    // Step 2: Create PayPal order
     const orderRes = await fetch(`${BASE_URL}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
@@ -37,23 +43,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           {
             amount: {
               currency_code: 'USD',
-              value: amount,
+              value: amount.toString(),
             },
-            custom_id: userId,
+            custom_id: uid,
           },
         ],
         application_context: {
-          return_url: 'https://yourdomain.com/paypal/success',
-          cancel_url: 'https://yourdomain.com/paypal/cancel',
+          return_url: 'https://vite-companions-pay.vercel.app/paypal/success',
+          cancel_url: 'https://vite-companions-pay.vercel.app/paypal/cancel',
         },
       }),
     });
 
     const data = await orderRes.json();
-    const approvalUrl = data.links.find((l: any) => l.rel === 'approve')?.href;
+    const redirectUrl = data.links.find((l: any) => l.rel === 'approve')?.href;
 
-    return res.status(200).json({ approvalUrl });
-  } catch (err) {
+    if (!redirectUrl) throw new Error('PayPal did not return an approval URL');
+
+    return res.status(200).json({ redirectUrl });
+  } catch (err: any) {
     console.error('PayPal error:', err);
     return res.status(500).json({ error: 'PayPal integration failed.' });
   }
