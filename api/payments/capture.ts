@@ -4,7 +4,6 @@ import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// 🔐 Firebase Init
 if (!getApps().length) {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
   initializeApp({ credential: cert(serviceAccount) });
@@ -13,7 +12,7 @@ const db = getFirestore();
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Live: api-m.paypal.com
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Use live in production
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -21,13 +20,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const { orderId, userId } = req.body;
-
   if (!orderId || !userId) {
     return res.status(400).json({ error: 'Missing orderId or userId' });
   }
 
   try {
-    // 1. Get access token
+    // Step 1: Get access token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -39,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const tokenData = await tokenRes.json();
     const access_token = tokenData.access_token;
 
-    // 2. Capture the payment
+    // Step 2: Capture the payment
     const captureRes = await fetch(`${BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
@@ -49,7 +47,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const captureData = await captureRes.json();
-
     if (!captureRes.ok) {
       return res.status(500).json({ error: 'Capture failed', details: captureData });
     }
@@ -58,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || '0'
     );
 
-    // 3. Update Firestore record
+    // Step 3: Update Firestore
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
@@ -83,7 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { merge: true }
     );
 
-    return res.status(200).json({ message: 'Payment captured and user balance updated.' });
+    return res.status(200).json({ success: true, amount: amountCaptured });
   } catch (error) {
     console.error('Capture error:', error);
     return res.status(500).json({ error: 'Something went wrong during capture.' });
