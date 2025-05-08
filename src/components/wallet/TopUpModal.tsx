@@ -1,14 +1,10 @@
-// File: src/components/dashboard/TopUpModal.tsx
+// File: src/components/wallet/TopUpModal.tsx
 import React, { useState } from 'react';
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from '@/hooks/use-toast';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogDescription,
+  DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,53 +27,45 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
     setErrorMessage(null);
 
     if (!userData) {
-      toast({
-        title: "Not authenticated",
-        description: "Please sign in to top up your balance.",
-        variant: "destructive",
-      });
+      toast({ title: "Not authenticated", description: "Please sign in.", variant: "destructive" });
       return;
     }
 
-    const numericAmount = parseFloat(amount);
-    if (!amount || isNaN(numericAmount) || numericAmount <= 0) {
-      toast({
-        title: "Invalid amount",
-        description: "Please enter a valid amount greater than zero.",
-        variant: "destructive",
-      });
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      toast({ title: "Invalid amount", description: "Enter a valid number", variant: "destructive" });
       return;
     }
 
     setLoading(true);
-
     try {
       const res = await fetch('/api/payments/paypal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: numericAmount.toFixed(2),
+          amount: parseFloat(amount).toFixed(2),
           userId: userData.uid,
           email: userData.email || '',
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data?.approvalUrl) {
-        throw new Error(data?.error || 'PayPal approval URL not received.');
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Unexpected response from server: ${text}`);
       }
 
-      window.location.href = data.approvalUrl;
+      if (!res.ok || !data?.approvalUrl) {
+        throw new Error(data?.error || 'Failed to create PayPal order.');
+      }
 
-    } catch (error: any) {
-      console.error("PayPal Error:", error);
-      setErrorMessage(error.message || "Something went wrong. Please try again.");
-      toast({
-        title: "Payment Error",
-        description: error.message || "Could not start PayPal checkout.",
-        variant: "destructive",
-      });
+      toast({ title: "Redirecting to PayPal...", description: "Please complete your payment." });
+      window.location.href = data.approvalUrl;
+    } catch (err: any) {
+      console.error("PayPal Error:", err);
+      setErrorMessage(err.message || "Something went wrong.");
+      toast({ title: "Payment Error", description: err.message || "Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -90,49 +78,45 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Top Up Balance</DialogTitle>
-          <DialogDescription>
-            Add Ihram Credits (IC) using PayPal
-          </DialogDescription>
+          <DialogDescription>Add Ihram Credits using PayPal</DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="amount">Amount (USD)</Label>
-              <Input
-                id="amount"
-                type="number"
-                min="1"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="mt-2"
-              />
-              <p className="text-xs text-muted-foreground mt-1">1 USD = 1 Ihram Credit (IC)</p>
-            </div>
-
-            <div>
-              <Label>Quick Select</Label>
-              <div className="grid grid-cols-4 gap-2 mt-2">
-                {predefinedAmounts.map((value) => (
-                  <Button
-                    key={value}
-                    variant={amount === value ? "default" : "outline"}
-                    onClick={() => setAmount(value)}
-                    className="w-full"
-                  >
-                    ${value}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {errorMessage && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start space-x-3">
-                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
-                <p className="text-sm text-red-800">{errorMessage}</p>
-              </div>
-            )}
+        <div className="py-4 space-y-4">
+          <div>
+            <Label htmlFor="amount">Amount (USD)</Label>
+            <Input
+              id="amount"
+              type="number"
+              min="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="mt-2"
+            />
+            <p className="text-xs text-muted-foreground mt-1">1 USD = 1 IC</p>
           </div>
+
+          <div>
+            <Label>Quick Select</Label>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              {predefinedAmounts.map((value) => (
+                <Button
+                  key={value}
+                  variant={amount === value ? "default" : "outline"}
+                  onClick={() => setAmount(value)}
+                  className="w-full"
+                >
+                  ${value}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {errorMessage && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start space-x-3">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-red-800">{errorMessage}</div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
