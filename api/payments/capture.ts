@@ -3,7 +3,6 @@ import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// ✅ Firebase Admin Init (using env vars instead of JSON.parse)
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -15,17 +14,13 @@ if (!getApps().length) {
 }
 const db = getFirestore();
 
-// ✅ PayPal Config
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Switch to live when ready
+const BASE_URL = 'https://api-m.sandbox.paypal.com';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
-    return res
-      .status(405)
-      .setHeader('Content-Type', 'application/json')
-      .json({ error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const { orderId, userId } = req.body;
@@ -35,7 +30,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // 1. Get PayPal Access Token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -49,11 +43,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const access_token = tokenData.access_token;
 
     if (!access_token) {
-      console.error('No access token:', tokenData);
       return res.status(500).json({ error: 'Unable to authenticate with PayPal' });
     }
 
-    // 2. Capture Payment
     const captureRes = await fetch(`${BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
@@ -77,7 +69,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid capture amount from PayPal' });
     }
 
-    // 3. Update Firestore
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
@@ -108,6 +99,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       { merge: true }
     );
+
+    // ✅ Log PayPal top-up to activity_logs
+    await db.collection('activity_logs').add({
+      uid: userId,
+      type: 'paypal',
+      amount: amountCaptured,
+      timestamp: new Date(),
+      description: 'Top-up via PayPal',
+    });
 
     return res.status(200).json({
       success: true,
