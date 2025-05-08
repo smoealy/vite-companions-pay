@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useUser } from "../../../contexts/UserContext";
+import { createPaypalSession } from '@/utils/paypalUtils';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
