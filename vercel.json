@@ -1,11 +1,11 @@
 {
   "functions": {
-    "functions/api/**/*.ts": {
+    "api/**/*.ts": {
       "runtime": "vercel-node@4.0.0"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/functions/api/$1" },
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
