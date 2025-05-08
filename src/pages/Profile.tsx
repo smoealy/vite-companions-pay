@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, LogOut, Settings, User, Calendar, Download } from 'lucide-react';
+import { ChevronLeft, LogOut, Settings, User, Calendar, Download, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -29,6 +29,8 @@ const Profile = () => {
   const name = userData?.name || 'Pilgrim';
   const email = userData?.email || user?.email || 'Not available';
   const country = userData?.country || '—';
+  const phone = userData?.phone || null;
+  const wallet = userData?.wallet || null;
   const joinedDate = user?.metadata?.creationTime
     ? new Date(user.metadata.creationTime).toLocaleDateString()
     : '—';
@@ -77,6 +79,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cp-green-50 to-white">
+      {/* Header */}
       <div className="bg-white border-b shadow-sm p-4">
         <div className="flex items-center">
           <Button
@@ -91,7 +94,9 @@ const Profile = () => {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="p-6 max-w-md mx-auto space-y-6">
+        {/* User Info */}
         <Card className="overflow-hidden shadow-sm border-none">
           <div className="bg-gradient-to-r from-cp-green-600 to-cp-green-700 p-6">
             <div className="flex items-center">
@@ -104,7 +109,7 @@ const Profile = () => {
               </div>
             </div>
           </div>
-          <CardContent className="p-6">
+          <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="text-sm text-cp-neutral-500">Country</div>
@@ -119,9 +124,36 @@ const Profile = () => {
                 <div className="font-medium">{totalTokens.toLocaleString()} IC</div>
               </div>
             </div>
+
+            {phone && (
+              <div>
+                <div className="text-sm text-cp-neutral-500">Phone</div>
+                <div className="font-medium">{phone}</div>
+              </div>
+            )}
+
+            {wallet && (
+              <div>
+                <div className="text-sm text-cp-neutral-500">Wallet Address</div>
+                <div className="font-medium break-all">{wallet}</div>
+              </div>
+            )}
+
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-cp-green-700 border-cp-green-300 flex items-center gap-1"
+                onClick={() => navigate('/settings')}
+              >
+                <Pencil size={14} />
+                Edit Profile
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
+        {/* Activity History */}
         <Card className="shadow-sm border-none">
           <CardContent className="p-6">
             <div className="flex items-center mb-4 justify-between">
@@ -188,11 +220,12 @@ const Profile = () => {
           </CardContent>
         </Card>
 
+        {/* Settings + Logout */}
         <div className="grid grid-cols-2 gap-4">
           <Button
             variant="outline"
             className="border-cp-green-300 text-cp-green-700 flex gap-2"
-            onClick={() => toast({ title: "Settings coming soon!" })}
+            onClick={() => navigate('/settings')}
           >
             <Settings size={18} />
             Settings
@@ -209,6 +242,7 @@ const Profile = () => {
         </div>
       </div>
 
+      {/* Logout Dialog */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
