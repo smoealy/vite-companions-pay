@@ -1,65 +1,71 @@
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import { tokenAbi, tokenAddress } from '@/lib/tokenAbi';
-import { useAccount } from 'wagmi';
+import { useAccount, usePublicClient } from 'wagmi';
 
 export const useEthersTokenBalance = () => {
   const [balance, setBalance] = useState<string>('0');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
   const { isConnected, address } = useAccount();
+  const publicClient = usePublicClient(); // wagmi fallback if no window.ethereum
 
   const fetchBalance = async (addr: string, provider: ethers.providers.Provider) => {
     try {
       const contract = new ethers.Contract(tokenAddress, tokenAbi, provider);
       let decimals = 18;
-
       try {
-        const rawDecimals = await contract.decimals();
-        decimals = Number(rawDecimals);
-        console.log('Ethers: Token decimals:', decimals);
+        decimals = await contract.decimals();
       } catch {
         console.warn('Fallback: Using default 18 decimals');
       }
 
       const rawBalance = await contract.balanceOf(addr);
-      console.log('Ethers: Raw balance:', rawBalance.toString());
-
       const formatted = ethers.utils.formatUnits(rawBalance, decimals);
-      console.log('Ethers: Formatted balance:', formatted);
       setBalance(formatted);
     } catch (err: any) {
-      console.error('Ethers Token Balance Error:', err);
-      setError(err?.message || 'Failed to get balance');
+      console.error('Balance fetch error:', err);
+      setError(err.message || 'Failed to fetch token balance');
       setBalance('0');
     }
   };
 
   useEffect(() => {
-    const run = async () => {
+    const loadBalance = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        if (!isConnected || !address) throw new Error('No wallet connected');
-        
-        const provider =
-          typeof window !== 'undefined' && window.ethereum
-            ? new ethers.providers.Web3Provider(window.ethereum)
-            : new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia');
+        let provider: ethers.providers.Provider;
+        let connectedAddress = address;
 
-        console.log('Balance hook: using address', address);
-        await fetchBalance(address, provider);
+        if (typeof window !== 'undefined' && window.ethereum) {
+          provider = new ethers.providers.Web3Provider(window.ethereum, 'any'); // ✅ Fix for chain switching & mobile
+          const accounts = await provider.listAccounts();
+          connectedAddress = address || accounts?.[0] || window.ethereum?.selectedAddress;
+          if (!connectedAddress) throw new Error('No wallet connected');
+        } else if (publicClient && address) {
+          provider = new ethers.providers.JsonRpcProvider(publicClient.transport.url);
+        } else {
+          throw new Error('No provider available');
+        }
+
+        await fetchBalance(connectedAddress!, provider);
       } catch (err: any) {
-        console.error('Balance fetch error:', err);
-        setError(err?.message || 'Unexpected error');
+        setError(err.message);
         setBalance('0');
       } finally {
         setIsLoading(false);
       }
     };
 
-    run();
+    if (isConnected) {
+      loadBalance();
+    } else {
+      setBalance('0');
+      setIsLoading(false);
+    }
   }, [isConnected, address]);
 
   const refreshBalance = async () => {
@@ -67,16 +73,18 @@ export const useEthersTokenBalance = () => {
     setIsLoading(true);
 
     try {
-      const provider =
-        typeof window !== 'undefined' && window.ethereum
-          ? new ethers.providers.Web3Provider(window.ethereum)
-          : new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia');
+      let provider: ethers.providers.Provider;
+      if (typeof window !== 'undefined' && window.ethereum) {
+        provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+      } else if (publicClient) {
+        provider = new ethers.providers.JsonRpcProvider(publicClient.transport.url);
+      } else {
+        throw new Error('No provider found');
+      }
 
       await fetchBalance(address, provider);
-      setError(null);
     } catch (err: any) {
-      console.error('Refresh balance error:', err);
-      setError(err?.message || 'Failed to refresh balance');
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -89,4 +97,3 @@ export const useEthersTokenBalance = () => {
     refreshBalance,
   };
 };
-
