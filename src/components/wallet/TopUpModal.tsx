@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useUser } from "../../../contexts/UserContext";
-import { createPaypalSession } from '@/utils/paypalUtils';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -26,7 +25,7 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
   const [amount, setAmount] = useState<string>('100');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
+
   const handlePayPalCheckout = async () => {
     setErrorMessage(null);
 
@@ -51,33 +50,45 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/payments/paypal', {
+      const res = await fetch('/api/payments/paypal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: parseFloat(amount).toFixed(2),
           userId: userData.uid,
+          email: userData.email || '',
         }),
       });
 
-      const data = await response.json();
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`PayPal error: ${res.status} - ${text}`);
+      }
 
-      if (!data.approvalUrl) {
-        throw new Error("No PayPal approval URL returned.");
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        throw new Error("Failed to parse PayPal response.");
+      }
+
+      if (!data?.approvalUrl) {
+        throw new Error("No approval URL received from PayPal.");
       }
 
       toast({
-        title: "Redirecting...",
-        description: "You'll be taken to PayPal to complete your payment.",
+        title: "Redirecting to PayPal...",
+        description: "Please complete your payment.",
       });
 
       window.location.href = data.approvalUrl;
+
     } catch (error: any) {
       console.error("PayPal Error:", error);
       setErrorMessage(error.message || "Payment failed. Please try again.");
       toast({
         title: "Payment Error",
-        description: "Could not start PayPal payment. Please try again later.",
+        description: error.message || "Could not start PayPal checkout.",
         variant: "destructive",
       });
     } finally {
