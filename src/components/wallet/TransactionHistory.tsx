@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser } from "../../../contexts/UserContext";
-import { getUserActivities, ActivityType, ActivityLog } from '@/utils/firestoreService';
+import { getICTransactions, ActivityType, ActivityLog } from '@/utils/firestoreService';
 
 interface TransactionHistoryProps {
   isLoading?: boolean;
@@ -22,10 +22,10 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   useEffect(() => {
     const fetchActivities = async () => {
       if (!user) return;
-      
+
       setLoading(true);
       try {
-        const userActivities = await getUserActivities(user.uid, limit);
+        const userActivities = await getICTransactions(user.uid, limit);
         setActivities(userActivities);
       } catch (error) {
         console.error("Error fetching activities:", error);
@@ -33,12 +33,12 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         setLoading(false);
       }
     };
-    
+
     if (!isLoading) {
       fetchActivities();
     }
   }, [user, isLoading, limit]);
-  
+
   const getTransactionIcon = (type: ActivityType) => {
     switch (type) {
       case 'purchase':
@@ -51,11 +51,13 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         return '❤️';
       case 'card_load':
         return '💳';
+      case 'paypal':
+        return '🟢';
       default:
         return '📝';
     }
   };
-  
+
   const getTransactionName = (type: ActivityType) => {
     switch (type) {
       case 'purchase':
@@ -68,18 +70,16 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         return 'Donation';
       case 'card_load':
         return 'Card Load';
+      case 'paypal':
+        return 'Top-Up via PayPal';
       default:
         return 'Transaction';
     }
   };
-  
+
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'Unknown date';
-    
-    // Firebase timestamp handling
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    
-    // If today, return time
     const today = new Date();
     if (
       date.getDate() === today.getDate() &&
@@ -92,8 +92,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         hour12: true
       }).format(date);
     }
-    
-    // Otherwise return formatted date
+
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
