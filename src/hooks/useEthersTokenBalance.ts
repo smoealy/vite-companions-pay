@@ -3,12 +3,6 @@ import { ethers } from 'ethers';
 import { tokenAbi, tokenAddress } from '@/lib/tokenAbi';
 import { useAccount } from 'wagmi';
 
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
-
 export const useEthersTokenBalance = () => {
   const [balance, setBalance] = useState<string>('0');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -46,25 +40,16 @@ export const useEthersTokenBalance = () => {
       setIsLoading(true);
       setError(null);
 
-      let connectedAddress = address;
-      let provider: ethers.providers.Provider | null = null;
-
       try {
-        if (typeof window !== 'undefined' && window.ethereum) {
-          provider = new ethers.providers.Web3Provider(window.ethereum);
-          const accounts = await provider.listAccounts();
-          connectedAddress = address || accounts?.[0] || window.ethereum?.selectedAddress;
+        if (!isConnected || !address) throw new Error('No wallet connected');
+        
+        const provider =
+          typeof window !== 'undefined' && window.ethereum
+            ? new ethers.providers.Web3Provider(window.ethereum)
+            : new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia');
 
-          if (!connectedAddress) throw new Error('No wallet connected');
-          console.log('Web3Provider connected address:', connectedAddress);
-        } else if (isConnected && address) {
-          provider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia');
-          console.warn('Using fallback RPC provider for:', address);
-        } else {
-          throw new Error('No Ethereum provider available');
-        }
-
-        await fetchBalance(connectedAddress!, provider!);
+        console.log('Balance hook: using address', address);
+        await fetchBalance(address, provider);
       } catch (err: any) {
         console.error('Balance fetch error:', err);
         setError(err?.message || 'Unexpected error');
@@ -74,32 +59,20 @@ export const useEthersTokenBalance = () => {
       }
     };
 
-    if (isConnected) {
-      run();
-    } else {
-      setBalance('0');
-      setIsLoading(false);
-    }
+    run();
   }, [isConnected, address]);
 
   const refreshBalance = async () => {
-    if (!isConnected) return;
+    if (!isConnected || !address) return;
     setIsLoading(true);
 
     try {
-      let provider: ethers.providers.Provider;
-      let connectedAddress = address;
+      const provider =
+        typeof window !== 'undefined' && window.ethereum
+          ? new ethers.providers.Web3Provider(window.ethereum)
+          : new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia');
 
-      if (typeof window !== 'undefined' && window.ethereum) {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        const accounts = await provider.listAccounts();
-        connectedAddress = address || accounts?.[0] || window.ethereum?.selectedAddress;
-        if (!connectedAddress) throw new Error('No wallet connected');
-      } else {
-        provider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/eth_sepolia');
-      }
-
-      await fetchBalance(connectedAddress!, provider);
+      await fetchBalance(address, provider);
       setError(null);
     } catch (err: any) {
       console.error('Refresh balance error:', err);
@@ -116,3 +89,4 @@ export const useEthersTokenBalance = () => {
     refreshBalance,
   };
 };
+
