@@ -65,23 +65,14 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
         throw new Error(`PayPal error: ${res.status} - ${text}`);
       }
 
-      let data;
-      try {
-        data = await res.json();
-      } catch (err) {
-        throw new Error("Failed to parse PayPal response.");
-      }
+      const data = await res.json();
 
       if (!data?.approvalUrl) {
         throw new Error("No approval URL received from PayPal.");
       }
 
-      toast({
-        title: "Redirecting to PayPal...",
-        description: "Please complete your payment.",
-      });
-
-      window.location.href = data.approvalUrl;
+      // ✅ Redirect directly using `location.href` (safe alternative to window.open)
+      window.location.assign(data.approvalUrl);
 
     } catch (error: any) {
       console.error("PayPal Error:", error);
@@ -108,46 +99,46 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="amount">Amount (USD)</Label>
-              <Input
-                id="amount"
-                type="number"
-                min="1"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="mt-2"
-                placeholder="Enter amount"
-              />
-              <p className="text-xs text-muted-foreground mt-1">1 USD = 1 Ihram Credit (IC)</p>
-            </div>
-
-            <div>
-              <Label>Quick Select</Label>
-              <div className="grid grid-cols-4 gap-2 mt-2">
-                {predefinedAmounts.map((value) => (
-                  <Button
-                    key={value}
-                    type="button"
-                    variant={amount === value ? "default" : "outline"}
-                    onClick={() => setAmount(value)}
-                    className="w-full"
-                  >
-                    ${value}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {errorMessage && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start space-x-3">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-red-800">{errorMessage}</div>
-              </div>
-            )}
+        <div className="py-4 space-y-4">
+          <div>
+            <Label htmlFor="amount">Amount (USD)</Label>
+            <Input
+              id="amount"
+              type="number"
+              min="1"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="Enter amount"
+              className="mt-2"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              1 USD = 1 Ihram Credit (IC)
+            </p>
           </div>
+
+          <div>
+            <Label>Quick Select</Label>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              {predefinedAmounts.map((value) => (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={amount === value ? "default" : "outline"}
+                  onClick={() => setAmount(value)}
+                  className="w-full"
+                >
+                  ${value}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {errorMessage && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start space-x-3">
+              <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+              <div className="text-sm text-red-800">{errorMessage}</div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
