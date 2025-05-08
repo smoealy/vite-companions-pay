@@ -1,4 +1,4 @@
-
+// File: src/components/dashboard/DashboardContent.tsx
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import TokenBalanceCard from '@/components/dashboard/TokenBalanceCard';
@@ -23,7 +23,7 @@ const DashboardContent: React.FC = () => {
   } = useRewards();
   
   const { user, mode, userData, refreshUserData } = useUser();
-  
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -35,44 +35,44 @@ const DashboardContent: React.FC = () => {
     }
   };
 
-  // Fetch and refresh user data on mount
+  // 🔄 Refresh user data when user or earnedToday changes
   useEffect(() => {
     if (user) {
       refreshUserData();
     }
-  }, [user, refreshUserData]);
+  }, [user, refreshUserData, earnedToday]);
 
-  // Handle rewards in Web2 mode
+  // 🎁 Handle reward earnings in Web2 mode
   const handleEarnPoints = async (action: string, amount: number) => {
     if (!user) return;
     
     try {
-      // Update user's balance in Firestore
+      // Update balance in Firestore
       await incrementBalance(user.uid, amount);
-      
-      // Update the UI
+
+      // Visually track daily reward state
       setEarnedToday((prev) => prev + amount);
-      
-      // Trigger the original reward handler for notification
+
+      // Trigger animation/notification
       handleEarnReward(action, amount);
-      
-      // Refresh user data
-      refreshUserData();
+
+      // 🔄 Refresh user data
+      await refreshUserData();
     } catch (error) {
       console.error("Error earning points:", error);
     }
   };
-  
+
   return (
     <>
-      {/* Floating reward notification */}
+      {/* 🎉 Reward Notification */}
       <RewardNotification 
         show={showRewardCard}
         rewardAction={rewardAction}
         rewardAmount={rewardAmount}
       />
       
-      {/* Main Content */}
+      {/* 🧾 Main Dashboard Content */}
       <div className="px-4 py-5 max-w-xl mx-auto w-full">
         <motion.div 
           variants={containerVariants}
@@ -80,25 +80,25 @@ const DashboardContent: React.FC = () => {
           animate="show"
           className="space-y-5"
         >
-          {/* Balance Card (Web2 or Web3 version) */}
+          {/* 💰 Balance Card */}
           {mode === 'web3' ? (
             <TokenBalanceCard earnedToday={earnedToday} />
           ) : (
             <SavingsBalanceCard earnedToday={earnedToday} />
           )}
-          
-          {/* Progress Tracker */}
+
+          {/* 📊 Progress Toward Goal */}
           <ProgressTrackerCard />
 
-          {/* Services */}
+          {/* 🧭 Services Grid */}
           <ServicesGrid />
 
-          {/* Earn More Section */}
+          {/* 🎯 Earn Rewards */}
           <EarnTokensCard 
             onEarnReward={mode === 'web2' ? handleEarnPoints : handleEarnReward} 
           />
 
-          {/* Recent Activity */}
+          {/* 🕘 Activity Log */}
           <ActivityList earnedToday={earnedToday} />
         </motion.div>
       </div>
