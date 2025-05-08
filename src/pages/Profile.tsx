@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, LogOut, Settings, User, Wallet, Gift, Calendar, Download } from 'lucide-react';
+import { ChevronLeft, LogOut, Settings, User, Calendar, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -15,31 +15,26 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from "@/contexts/UserContext";
 import { signOut } from '../auth';
+import { getICTransactions } from '@/utils/firestoreService';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useUser();
-  const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
-  
-  // Mock user data
-  const userData = {
-    name: "Muhammad Ahmad",
-    email: "muhammad@example.com",
-    country: "Malaysia",
-    joinedDate: "January 15, 2025",
-    totalTokens: 3500
-  };
-  
-  // Mock transaction history
-  const transactions = [
-    { id: 1, type: "purchase", amount: 1000, date: "May 2, 2025", status: "completed" },
-    { id: 2, type: "purchase", amount: 2500, date: "Apr 15, 2025", status: "completed" },
-    { id: 3, type: "redemption", amount: 50, date: "Apr 20, 2025", status: "completed", details: "Umrah Package Discount" },
-    { id: 4, type: "card_load", amount: 100, date: "Apr 30, 2025", status: "completed", details: "Virtual Card Load" },
-  ];
-  
+  const { userData, user } = useUser();
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const name = userData?.name || 'Pilgrim';
+  const email = userData?.email || user?.email || 'Not available';
+  const country = userData?.country || '—';
+  const joinedDate = user?.metadata?.creationTime
+    ? new Date(user.metadata.creationTime).toLocaleDateString()
+    : '—';
+
+  const totalTokens = userData?.icBalance || 0;
+
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
@@ -57,37 +52,46 @@ const Profile = () => {
       setIsLoggingOut(false);
     }
   };
-  
+
   const handleExportActivity = () => {
-    // In a real app, this would generate and download a CSV file
     toast({
       title: "Activity Export",
       description: "Your activity history has been exported to CSV.",
     });
   };
-  
+
+  useEffect(() => {
+    const fetchTx = async () => {
+      if (!user?.uid) return;
+      try {
+        const txs = await getICTransactions(user.uid, 100);
+        setTransactions(txs);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTx();
+  }, [user]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cp-green-50 to-white">
-      {/* Header */}
       <div className="bg-white border-b shadow-sm p-4">
         <div className="flex items-center">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="text-cp-neutral-700 mr-2"
             onClick={() => navigate('/dashboard')}
           >
             <ChevronLeft size={24} />
           </Button>
-          <h1 className="text-xl font-semibold text-cp-green-700">
-            Profile
-          </h1>
+          <h1 className="text-xl font-semibold text-cp-green-700">Profile</h1>
         </div>
       </div>
-      
-      {/* Main Content */}
+
       <div className="p-6 max-w-md mx-auto space-y-6">
-        {/* User info card */}
         <Card className="overflow-hidden shadow-sm border-none">
           <div className="bg-gradient-to-r from-cp-green-600 to-cp-green-700 p-6">
             <div className="flex items-center">
@@ -95,8 +99,8 @@ const Profile = () => {
                 <User size={32} className="text-cp-green-600" />
               </div>
               <div className="text-white">
-                <div className="text-xl font-semibold">{userData.name}</div>
-                <div className="text-white/80">{userData.email}</div>
+                <div className="text-xl font-semibold">{name}</div>
+                <div className="text-white/80">{email}</div>
               </div>
             </div>
           </div>
@@ -104,21 +108,20 @@ const Profile = () => {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="text-sm text-cp-neutral-500">Country</div>
-                <div className="font-medium">{userData.country}</div>
+                <div className="font-medium">{country}</div>
               </div>
               <div>
                 <div className="text-sm text-cp-neutral-500">Member Since</div>
-                <div className="font-medium">{userData.joinedDate}</div>
+                <div className="font-medium">{joinedDate}</div>
               </div>
               <div>
-                <div className="text-sm text-cp-neutral-500">Total Tokens</div>
-                <div className="font-medium">{userData.totalTokens} IHRAM</div>
+                <div className="text-sm text-cp-neutral-500">Total Balance</div>
+                <div className="font-medium">{totalTokens.toLocaleString()} IC</div>
               </div>
             </div>
           </CardContent>
         </Card>
-        
-        {/* Transaction History */}
+
         <Card className="shadow-sm border-none">
           <CardContent className="p-6">
             <div className="flex items-center mb-4 justify-between">
@@ -136,53 +139,65 @@ const Profile = () => {
                 Export
               </Button>
             </div>
-            
+
             <div className="space-y-4">
-              {transactions.map((tx) => (
-                <div key={tx.id}>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="font-medium capitalize">
-                        {tx.type === "purchase" 
-                          ? "Token Purchase" 
-                          : tx.type === "redemption" 
-                            ? "Umrah Redemption" 
+              {loading ? (
+                <p className="text-sm text-cp-neutral-500">Loading...</p>
+              ) : transactions.length === 0 ? (
+                <p className="text-sm text-cp-neutral-500">No activity yet</p>
+              ) : (
+                transactions.map((tx) => (
+                  <div key={tx.id}>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium capitalize">
+                          {tx.type === "purchase"
+                            ? "Token Purchase"
+                            : tx.type === "redemption"
+                            ? "Umrah Redemption"
                             : tx.type === "card_load"
-                              ? "Card Load"
-                              : "Transaction"}
+                            ? "Card Load"
+                            : tx.type === "paypal"
+                            ? "Top-Up via PayPal"
+                            : "Transaction"}
+                        </div>
+                        <div className="text-sm text-cp-neutral-500">
+                          {tx.timestamp?.toDate
+                            ? tx.timestamp.toDate().toLocaleDateString()
+                            : '—'}
+                        </div>
+                        {tx.description && (
+                          <div className="text-xs text-cp-neutral-600">{tx.description}</div>
+                        )}
                       </div>
-                      <div className="text-sm text-cp-neutral-500">{tx.date}</div>
-                      {tx.details && (
-                        <div className="text-xs text-cp-neutral-600">{tx.details}</div>
-                      )}
+                      <div className="text-right">
+                        <div className="font-semibold">
+                          {tx.amount >= 0 ? '+' : '-'}
+                          {Math.abs(tx.amount)} IC
+                        </div>
+                        <div className="text-xs px-2 py-1 rounded-full bg-cp-green-100 text-cp-green-700 inline-block">
+                          completed
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold">
-                        {tx.type === "purchase" ? "+" : "-"}{tx.amount} IHRAM
-                      </div>
-                      <div className="text-xs px-2 py-1 rounded-full bg-cp-green-100 text-cp-green-700 inline-block">
-                        {tx.status}
-                      </div>
-                    </div>
+                    <Separator className="my-3" />
                   </div>
-                  <Separator className="my-3" />
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
-        
-        {/* Settings & Logout */}
+
         <div className="grid grid-cols-2 gap-4">
           <Button
             variant="outline"
             className="border-cp-green-300 text-cp-green-700 flex gap-2"
-            onClick={() => {/* Navigate to settings */}}
+            onClick={() => toast({ title: "Settings coming soon!" })}
           >
             <Settings size={18} />
             Settings
           </Button>
-          
+
           <Button
             variant="outline"
             className="border-cp-neutral-300 text-cp-neutral-700 flex gap-2"
@@ -193,26 +208,23 @@ const Profile = () => {
           </Button>
         </div>
       </div>
-      
-      {/* Logout Dialog */}
+
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to log out of your account?
-            </DialogDescription>
+            <DialogDescription>Are you sure you want to log out?</DialogDescription>
           </DialogHeader>
           <DialogFooter className="pt-4 flex sm:justify-end gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setLogoutDialogOpen(false)}
               disabled={isLoggingOut}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleLogout}
               disabled={isLoggingOut}
             >
