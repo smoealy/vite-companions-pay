@@ -21,8 +21,8 @@ import {
   logAdminAction
 } from './firebase/activityService';
 
-// ✅ NEW: Import firebase directly to fetch icTransactions
-import { getDoc, doc } from 'firebase/firestore';
+// ✅ NEW: Import firebase directly to fetch icTransactions and update user profile
+import { getDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 // ✅ NEW: Define IC activity types
@@ -62,6 +62,16 @@ export const getICTransactions = async (
     }));
 };
 
+// ✅ NEW: Update user profile fields (name, country, phone)
+export const updateUserProfile = async (
+  uid: string | undefined,
+  data: Partial<{ name: string; country: string; phone: string }>
+): Promise<void> => {
+  if (!uid) throw new Error("UID is required to update profile");
+  const userRef = doc(db, 'users', uid);
+  await setDoc(userRef, data, { merge: true });
+};
+
 // 🔁 Re-export types
 export type { UmrahRedemptionData } from './firebase/redemptionService';
 export type { ActivityLog as LoggedActivity, ActivityType as LoggedActivityType } from './firebase/activityService';
@@ -72,12 +82,12 @@ export {
   updateUserData,
   incrementBalance,
   getAdminUsers,
-  
+
   submitUmrahRedemption,
   getUmrahRedemptions,
   updateRedemptionStatus,
   getRedemptionStats,
-  
+
   logActivity,
   getUserActivities,
   logAdminAction
