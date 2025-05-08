@@ -1,68 +1,59 @@
-
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import { tokenAbi, tokenAddress } from '@/lib/tokenAbi';
-import { useAccount } from 'wagmi';
-
-// Declare global ethereum object for TypeScript
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
+import { useAccount, usePublicClient } from 'wagmi';
 
 export const useEthersTokenBalance = () => {
   const [balance, setBalance] = useState<string>('0');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const { isConnected } = useAccount();
+
+  const { isConnected, address } = useAccount();
+  const publicClient = usePublicClient(); // wagmi fallback if no window.ethereum
+
+  const fetchBalance = async (addr: string, provider: ethers.providers.Provider) => {
+    try {
+      const contract = new ethers.Contract(tokenAddress, tokenAbi, provider);
+      let decimals = 18;
+      try {
+        decimals = await contract.decimals();
+      } catch {
+        console.warn('Fallback: Using default 18 decimals');
+      }
+
+      const rawBalance = await contract.balanceOf(addr);
+      const formatted = ethers.utils.formatUnits(rawBalance, decimals);
+      setBalance(formatted);
+    } catch (err: any) {
+      console.error('Balance fetch error:', err);
+      setError(err.message || 'Failed to fetch token balance');
+      setBalance('0');
+    }
+  };
 
   useEffect(() => {
-    const fetchBalance = async () => {
+    const loadBalance = async () => {
       setIsLoading(true);
       setError(null);
-      
-      try {
-        if (!window.ethereum) {
-          console.log("No ethereum provider found");
-          setError("No wallet detected");
-          setIsLoading(false);
-          return;
-        }
-        
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        
-        // Request account access if needed
-        await provider.send("eth_requestAccounts", []);
-        
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
-        console.log("Ethers: Connected address:", address);
 
-        const contract = new ethers.Contract(tokenAddress, tokenAbi, provider);
-        
-        // Get decimals first
-        let decimals = 18;
-        try {
-          const rawDecimals = await contract.decimals();
-          // Ensure decimals is a number, not a BigInt
-          decimals = Number(rawDecimals);
-          console.log("Ethers: Token decimals:", decimals);
-        } catch (err) {
-          console.error("Ethers: Failed to get decimals, using default 18");
+      try {
+        let provider: ethers.providers.Provider;
+        let connectedAddress = address;
+
+        if (typeof window !== 'undefined' && window.ethereum) {
+          provider = new ethers.providers.Web3Provider(window.ethereum, 'any'); // ✅ Fix for chain switching & mobile
+          const accounts = await provider.listAccounts();
+          connectedAddress = address || accounts?.[0] || window.ethereum?.selectedAddress;
+          if (!connectedAddress) throw new Error('No wallet connected');
+        } else if (publicClient && address) {
+          provider = new ethers.providers.JsonRpcProvider(publicClient.transport.url);
+        } else {
+          throw new Error('No provider available');
         }
-        
-        // Get balance
-        const rawBalance = await contract.balanceOf(address);
-        console.log("Ethers: Raw balance:", rawBalance.toString());
-        
-        const formatted = ethers.utils.formatUnits(rawBalance, decimals);
-        console.log("Ethers: Formatted balance:", formatted);
-        
-        setBalance(formatted);
+
+        await fetchBalance(connectedAddress!, provider);
       } catch (err: any) {
-        console.error("Ethers Token Balance Error:", err);
-        setError(err?.message || "Failed to get balance");
+        setError(err.message);
         setBalance('0');
       } finally {
         setIsLoading(false);
@@ -70,52 +61,39 @@ export const useEthersTokenBalance = () => {
     };
 
     if (isConnected) {
-      fetchBalance();
+      loadBalance();
     } else {
+      setBalance('0');
       setIsLoading(false);
     }
-  }, [isConnected]);
+  }, [isConnected, address]);
 
-  // Function to manually trigger balance refresh
   const refreshBalance = async () => {
-    if (isConnected) {
-      try {
-        setIsLoading(true);
-        if (!window.ethereum) {
-          throw new Error("No ethereum provider found");
-        }
-        
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
-        
-        const contract = new ethers.Contract(tokenAddress, tokenAbi, provider);
-        let decimals = 18;
-        try {
-          const rawDecimals = await contract.decimals();
-          // Ensure decimals is a number, not a BigInt
-          decimals = Number(rawDecimals);
-        } catch (err) {
-          console.warn("Failed to get decimals, using default 18");
-        }
-        
-        const rawBalance = await contract.balanceOf(address);
-        const formatted = ethers.utils.formatUnits(rawBalance, decimals);
-        setBalance(formatted);
-        setError(null);
-      } catch (err: any) {
-        console.error("Error refreshing balance:", err);
-        setError(err?.message || "Failed to refresh balance");
-      } finally {
-        setIsLoading(false);
+    if (!isConnected || !address) return;
+    setIsLoading(true);
+
+    try {
+      let provider: ethers.providers.Provider;
+      if (typeof window !== 'undefined' && window.ethereum) {
+        provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+      } else if (publicClient) {
+        provider = new ethers.providers.JsonRpcProvider(publicClient.transport.url);
+      } else {
+        throw new Error('No provider found');
       }
+
+      await fetchBalance(address, provider);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return { 
-    balance, 
-    isLoading, 
-    error, 
-    refreshBalance
+  return {
+    balance,
+    isLoading,
+    error,
+    refreshBalance,
   };
 };

@@ -13,15 +13,15 @@ import { useUser } from "@/contexts/UserContext";
 import { incrementBalance } from '@/utils/firestoreService';
 
 const DashboardContent: React.FC = () => {
-  const { 
-    showRewardCard, 
-    rewardAction, 
+  const {
+    showRewardCard,
+    rewardAction,
     rewardAmount,
     earnedToday,
     handleEarnReward,
     setEarnedToday
   } = useRewards();
-  
+
   const { user, mode, userData, refreshUserData } = useUser();
 
   // Animation variants
@@ -42,21 +42,24 @@ const DashboardContent: React.FC = () => {
     }
   }, [user, refreshUserData, earnedToday]);
 
+  // 🔄 Patch for mobile wallet not updating balance on first load
+  useEffect(() => {
+    if (mode === 'web3') {
+      const timeout = setTimeout(() => {
+        refreshUserData();
+      }, 2500); // slight delay to ensure wallet provider injection completes
+      return () => clearTimeout(timeout);
+    }
+  }, [mode, refreshUserData]);
+
   // 🎁 Handle reward earnings in Web2 mode
   const handleEarnPoints = async (action: string, amount: number) => {
     if (!user) return;
-    
+
     try {
-      // Update balance in Firestore
       await incrementBalance(user.uid, amount);
-
-      // Visually track daily reward state
       setEarnedToday((prev) => prev + amount);
-
-      // Trigger animation/notification
       handleEarnReward(action, amount);
-
-      // 🔄 Refresh user data
       await refreshUserData();
     } catch (error) {
       console.error("Error earning points:", error);
@@ -66,15 +69,15 @@ const DashboardContent: React.FC = () => {
   return (
     <>
       {/* 🎉 Reward Notification */}
-      <RewardNotification 
+      <RewardNotification
         show={showRewardCard}
         rewardAction={rewardAction}
         rewardAmount={rewardAmount}
       />
-      
+
       {/* 🧾 Main Dashboard Content */}
       <div className="px-4 py-5 max-w-xl mx-auto w-full">
-        <motion.div 
+        <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="show"
@@ -94,8 +97,8 @@ const DashboardContent: React.FC = () => {
           <ServicesGrid />
 
           {/* 🎯 Earn Rewards */}
-          <EarnTokensCard 
-            onEarnReward={mode === 'web2' ? handleEarnPoints : handleEarnReward} 
+          <EarnTokensCard
+            onEarnReward={mode === 'web2' ? handleEarnPoints : handleEarnReward}
           />
 
           {/* 🕘 Activity Log */}
