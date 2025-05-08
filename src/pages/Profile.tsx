@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from "../../contexts/UserContext";
+import { useUser } from "@/contexts/UserContext";
 import { signOut } from '../auth';
 
 const Profile = () => {
