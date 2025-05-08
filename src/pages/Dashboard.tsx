@@ -1,3 +1,4 @@
+// File: src/pages/Dashboard.tsx
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -13,42 +14,40 @@ const Dashboard = () => {
 
   useEffect(() => {
     const paypalStatus = searchParams.get('paypal');
-    const orderId = searchParams.get('token'); // PayPal returns orderId as "token"
+    const orderId = searchParams.get('token');
 
     if (paypalStatus === 'success' && orderId && userData?.uid) {
       toast({
         title: 'Finalizing Payment...',
-        description: 'Please wait while we confirm your payment.',
+        description: 'Please wait while we confirm your transaction.',
       });
 
       fetch('/api/payments/capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderId,
-          userId: userData.uid,
-        }),
+        body: JSON.stringify({ orderId, userId: userData.uid }),
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.status === 'COMPLETED') {
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
             toast({
-              title: 'Payment Confirmed!',
-              description: 'Your balance has been updated.',
+              title: 'Payment Successful',
+              description: `You added $${data.amount} in Ihram Credits.`,
             });
             refreshUserData();
           } else {
             toast({
-              title: 'Capture Failed',
-              description: 'Unable to verify payment. Please contact support.',
+              title: 'Payment Error',
+              description: data.error || 'Unable to finalize PayPal payment.',
               variant: 'destructive',
             });
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error('Capture error:', err);
           toast({
-            title: 'Error',
-            description: 'An error occurred while finalizing your payment.',
+            title: 'Capture Failed',
+            description: 'There was an issue finalizing your payment.',
             variant: 'destructive',
           });
         });
@@ -59,7 +58,7 @@ const Dashboard = () => {
         variant: 'destructive',
       });
     }
-  }, [searchParams, toast, refreshUserData, userData]);
+  }, [searchParams, toast, userData, refreshUserData]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-cp-cream/30">
