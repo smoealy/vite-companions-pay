@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+// 🔐 Firebase Init
 if (!getApps().length) {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
   initializeApp({ credential: cert(serviceAccount) });
@@ -12,7 +13,7 @@ const db = getFirestore();
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Change for production
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Live: api-m.paypal.com
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -26,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Get PayPal token
+    // 1. Get access token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -35,11 +36,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: 'grant_type=client_credentials',
     });
-
     const tokenData = await tokenRes.json();
     const access_token = tokenData.access_token;
 
-    // Capture payment
+    // 2. Capture the payment
     const captureRes = await fetch(`${BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
@@ -50,34 +50,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const captureData = await captureRes.json();
 
-    // Get amount
-    const amount = captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value;
-
-    if (!amount) {
-      return res.status(500).json({ error: 'Unable to read capture amount.' });
+    if (!captureRes.ok) {
+      return res.status(500).json({ error: 'Capture failed', details: captureData });
     }
 
-    // Update Firestore
+    const amountCaptured = parseFloat(
+      captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || '0'
+    );
+
+    // 3. Update Firestore record
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
-    const existing = userDoc.data();
 
-    await userRef.update({
-      icBalance: (existing?.icBalance || 0) + parseFloat(amount),
-      icTransactions: [
-        ...(existing?.icTransactions || []),
-        {
-          type: 'paypal',
-          amount: parseFloat(amount),
-          timestamp: new Date().toISOString(),
-          status: 'completed',
-        },
-      ],
-    });
+    if (!userDoc.exists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-    return res.status(200).json({ success: true, amount });
-  } catch (err) {
-    console.error('Capture error:', err);
-    return res.status(500).json({ error: 'Capture failed.' });
+    const userData = userDoc.data()!;
+    const updatedTransactions = (userData.icTransactions || []).map((tx: any) =>
+      tx.type === 'paypal' && tx.amount === amountCaptured && tx.status === 'pending'
+        ? { ...tx, status: 'completed' }
+        : tx
+    );
+
+    const updatedBalance = (userData.icBalance || 0) + amountCaptured;
+
+    await userRef.set(
+      {
+        icBalance: updatedBalance,
+        icTransactions: updatedTransactions,
+      },
+      { merge: true }
+    );
+
+    return res.status(200).json({ message: 'Payment captured and user balance updated.' });
+  } catch (error) {
+    console.error('Capture error:', error);
+    return res.status(500).json({ error: 'Something went wrong during capture.' });
   }
 }
