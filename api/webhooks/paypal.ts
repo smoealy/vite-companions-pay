@@ -1,60 +1,96 @@
 // File: api/webhooks/paypal.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getFirestore } from 'firebase-admin/firestore';
+import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
-// Ensure Firebase Admin is initialized only once
+// ✅ Firebase Admin Init
 if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
+  initializeApp({ credential: cert(serviceAccount) });
 }
-
 const db = getFirestore();
 
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
+const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Change to live for production
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  const { amount, userId } = req.body;
+
+  if (!amount || !userId) {
+    return res.status(400).json({ error: 'Missing amount or userId' });
+  }
 
   try {
-    const event = req.body;
+    // 1. Get PayPal access token
+    const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Basic ' + Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64'),
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials',
+    });
 
-    // Look for completed payments
-    if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
-      const userId = event.resource?.custom_id;
-      const amount = parseFloat(event.resource?.amount?.value || '0');
+    const tokenData = await tokenRes.json();
+    const access_token = tokenData.access_token;
 
-      if (!userId || !amount) {
-        console.error('Missing userId or amount from PayPal webhook');
-        return res.status(400).end();
-      }
-
-      // Credit user in Firestore
-      const userRef = db.collection('users').doc(userId);
-      await userRef.set(
-        {
-          icBalance: amount,
-          icTransactions: [
-            {
-              type: 'paypal',
-              amount,
-              timestamp: new Date().toISOString(),
+    // 2. Create PayPal order
+    const orderRes = await fetch(`${BASE_URL}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        purchase_units: [
+          {
+            amount: {
+              currency_code: 'USD',
+              value: amount,
             },
-          ],
+            custom_id: userId,
+          },
+        ],
+        application_context: {
+          return_url: 'https://yourdomain.com/paypal/success',
+          cancel_url: 'https://yourdomain.com/paypal/cancel',
         },
-        { merge: true }
-      );
+      }),
+    });
 
-      console.log(`Credited ${amount} IC to user ${userId}`);
-      return res.status(200).json({ received: true });
+    const orderData = await orderRes.json();
+    const approvalUrl = orderData.links?.find((l: any) => l.rel === 'approve')?.href;
+
+    if (!approvalUrl) {
+      return res.status(500).json({ error: 'No approval URL found from PayPal.' });
     }
 
-    return res.status(200).json({ ignored: true });
-  } catch (err) {
-    console.error('Webhook Error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    // ✅ Log transaction intent to Firestore
+    const userRef = db.collection('users').doc(userId);
+    await userRef.set(
+      {
+        icTransactions: [
+          {
+            type: 'paypal',
+            amount: parseFloat(amount),
+            timestamp: new Date().toISOString(),
+            status: 'pending',
+          },
+        ],
+      },
+      { merge: true }
+    );
+
+    return res.status(200).json({ approvalUrl });
+  } catch (err: any) {
+    console.error('PayPal error:', err);
+    return res.status(500).json({ error: 'PayPal integration failed.' });
   }
 }
