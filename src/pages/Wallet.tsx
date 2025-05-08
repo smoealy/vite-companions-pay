@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, Plus, ArrowDown, History, Coins, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useUser } from "../../contexts/UserContext";
+import { useUser } from "@/contexts/UserContext";
 import TokenDisplay from '@/components/ui-components/TokenDisplay';
 import TransactionHistory from '@/components/wallet/TransactionHistory';
 import WalletSummaryCard from '@/components/wallet/WalletSummaryCard';
