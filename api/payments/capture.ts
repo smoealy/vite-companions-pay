@@ -3,17 +3,22 @@ import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// ✅ Firebase Admin Init
+// ✅ Firebase Admin Init (using env vars instead of JSON.parse)
 if (!getApps().length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
-  initializeApp({ credential: cert(serviceAccount) });
+  initializeApp({
+    credential: cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
 }
 const db = getFirestore();
 
 // ✅ PayPal Config
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Use live URL in production
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Switch to live when ready
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -48,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Unable to authenticate with PayPal' });
     }
 
-    // 2. Capture the payment
+    // 2. Capture Payment
     const captureRes = await fetch(`${BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
@@ -72,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid capture amount from PayPal' });
     }
 
-    // 3. Update Firestore user balance and mark txn complete
+    // 3. Update Firestore
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
