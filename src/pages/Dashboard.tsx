@@ -9,17 +9,49 @@ import Footer from '@/components/ui-components/Footer';
 const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { refreshUserData } = useUser();
+  const { refreshUserData, userData } = useUser();
 
   useEffect(() => {
     const paypalStatus = searchParams.get('paypal');
+    const orderId = searchParams.get('token'); // PayPal returns orderId as "token"
 
-    if (paypalStatus === 'success') {
+    if (paypalStatus === 'success' && orderId && userData?.uid) {
       toast({
-        title: 'Payment Successful',
-        description: 'Thank you! Your balance will be updated shortly.',
+        title: 'Finalizing Payment...',
+        description: 'Please wait while we confirm your payment.',
       });
-      refreshUserData(); // ✅ Refresh balance from Firestore
+
+      fetch('/api/payments/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          userId: userData.uid,
+        }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'COMPLETED') {
+            toast({
+              title: 'Payment Confirmed!',
+              description: 'Your balance has been updated.',
+            });
+            refreshUserData();
+          } else {
+            toast({
+              title: 'Capture Failed',
+              description: 'Unable to verify payment. Please contact support.',
+              variant: 'destructive',
+            });
+          }
+        })
+        .catch(() => {
+          toast({
+            title: 'Error',
+            description: 'An error occurred while finalizing your payment.',
+            variant: 'destructive',
+          });
+        });
     } else if (paypalStatus === 'cancel') {
       toast({
         title: 'Payment Cancelled',
@@ -27,7 +59,7 @@ const Dashboard = () => {
         variant: 'destructive',
       });
     }
-  }, [searchParams, toast, refreshUserData]);
+  }, [searchParams, toast, refreshUserData, userData]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-cp-cream/30">
