@@ -1,23 +1,24 @@
+// File: api/payments/paypal.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Use 'https://api-m.paypal.com' for production
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Change to live URL for production
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { amount, uid, email } = req.body;
+  const { amount, userId } = req.body;
 
-  if (!amount || !uid || !email) {
-    return res.status(400).json({ error: 'Missing required fields' });
+  if (!amount || !userId) {
+    return res.status(400).json({ error: 'Missing amount or userId' });
   }
 
   try {
-    // Step 1: Get access token
+    // 1. Get PayPal access token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -27,10 +28,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: 'grant_type=client_credentials',
     });
 
-    const { access_token } = await tokenRes.json();
-    if (!access_token) throw new Error('Unable to get PayPal access token');
+    const tokenData = await tokenRes.json();
+    const access_token = tokenData.access_token;
 
-    // Step 2: Create PayPal order
+    // 2. Create PayPal order
     const orderRes = await fetch(`${BASE_URL}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
@@ -43,25 +44,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           {
             amount: {
               currency_code: 'USD',
-              value: amount.toString(),
+              value: amount,
             },
-            custom_id: uid,
+            custom_id: userId,
           },
         ],
         application_context: {
-          return_url: 'https://vite-companions-pay.vercel.app/paypal/success',
-          cancel_url: 'https://vite-companions-pay.vercel.app/paypal/cancel',
+          return_url: 'https://yourdomain.com/paypal/success',
+          cancel_url: 'https://yourdomain.com/paypal/cancel',
         },
       }),
     });
 
-    const data = await orderRes.json();
-    const redirectUrl = data.links.find((l: any) => l.rel === 'approve')?.href;
+    const orderData = await orderRes.json();
+    const approvalUrl = orderData.links?.find((l: any) => l.rel === 'approve')?.href;
 
-    if (!redirectUrl) throw new Error('PayPal did not return an approval URL');
+    if (!approvalUrl) {
+      return res.status(500).json({ error: 'No approval URL found from PayPal.' });
+    }
 
-    return res.status(200).json({ redirectUrl });
-  } catch (err: any) {
+    return res.status(200).json({ approvalUrl });
+  } catch (err) {
     console.error('PayPal error:', err);
     return res.status(500).json({ error: 'PayPal integration failed.' });
   }
