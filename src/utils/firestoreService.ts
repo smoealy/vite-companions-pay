@@ -66,7 +66,7 @@ export const getICTransactions = async (
 export type { UmrahRedemptionData } from './firebase/redemptionService';
 export type { ActivityLog as LoggedActivity, ActivityType as LoggedActivityType } from './firebase/activityService';
 
-// 🔁 Re-export all other services
+// 🔁 Re-export all other services (without duplicating getICTransactions)
 export {
   getUserData,
   updateUserData,
@@ -80,8 +80,5 @@ export {
   
   logActivity,
   getUserActivities,
-  logAdminAction,
-
-  // ✅ NEW export
-  getICTransactions
+  logAdminAction
 };
