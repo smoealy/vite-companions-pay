@@ -28,13 +28,13 @@ const Dashboard = () => {
         body: JSON.stringify({ orderId, userId: userData.uid }),
       })
         .then((res) => res.json())
-        .then((data) => {
+        .then(async (data) => {
           if (data.success) {
             toast({
               title: 'Payment Successful',
               description: `You added $${data.amount} in Ihram Credits.`,
             });
-            refreshUserData();
+            await refreshUserData(); // ✅ Make sure the UI is updated after fetch
           } else {
             toast({
               title: 'Payment Error',
