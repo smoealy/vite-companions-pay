@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db, storage } from "../src/firebaseConfig";
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -14,8 +13,16 @@ interface UserData {
   onboarded: boolean;
   balance: number;
   isAdmin: boolean;
-  mode: UserMode; // Added the mode property
+  mode: UserMode;
   photoURL?: string;
+
+  // ✅ NEW FIELDS:
+  icBalance?: number;
+  icTransactions?: {
+    type: string;
+    amount: number;
+    timestamp: string;
+  }[];
 }
 
 interface UserContextType {
@@ -26,7 +33,7 @@ interface UserContextType {
   setUserMode: (mode: UserMode) => Promise<void>;
   isAdmin: boolean;
   updateUserData: (data: Partial<UserData>) => Promise<void>;
-  refreshUserData: () => Promise<UserData | null>; // Updated return type
+  refreshUserData: () => Promise<UserData | null>;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -37,7 +44,7 @@ const UserContext = createContext<UserContextType>({
   setUserMode: async () => {},
   isAdmin: false,
   updateUserData: async () => {},
-  refreshUserData: async () => null // Updated return default
+  refreshUserData: async () => null
 });
 
 export const useUser = () => useContext(UserContext);
@@ -58,7 +65,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setUser(currentUser);
       
       if (currentUser) {
-        // Create user document if it doesn't exist and fetch user data
         try {
           const userDoc = await createUserDocIfNeeded(currentUser);
           setUserData(userDoc);
@@ -66,7 +72,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           setIsAdmin(userDoc?.isAdmin || false);
         } catch (error) {
           console.error("Error setting up user:", error);
-          // Ensure we still set default values even if there's an error
           setMode('web2');
           setIsAdmin(false);
         }
@@ -78,7 +83,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       
       setLoading(false);
     });
-    
+
     return unsubscribe;
   }, []);
   
@@ -93,41 +98,41 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         displayName: user.displayName,
         createdAt: serverTimestamp(),
         onboarded: false,
-        mode: 'web2' as UserMode, 
+        mode: 'web2' as UserMode,
         balance: 0,
-        isAdmin: false
+        isAdmin: false,
+        icBalance: 0,
+        icTransactions: [],
       };
-      
+
       await setDoc(userRef, newUserData);
       return { ...newUserData, createdAt: new Date() };
     }
-    
+
     return userDoc.data() as UserData;
   };
-  
+
   const updateUserData = async (data: Partial<UserData>) => {
     if (!user) return;
-    
+
     const userRef = doc(db, 'users', user.uid);
     await setDoc(userRef, data, { merge: true });
-    
-    // Update local state
+
     setUserData(prev => prev ? { ...prev, ...data } : null);
-    
-    // Update mode if it was changed
+
     if (data.mode) {
       setMode(data.mode);
     }
   };
-  
+
   const refreshUserData = async (): Promise<UserData | null> => {
     if (!user) return null;
-    
+
     const userRef = doc(db, 'users', user.uid);
-    
+
     try {
       const userDoc = await getDoc(userRef);
-      
+
       if (userDoc.exists()) {
         const userData = userDoc.data() as UserData;
         setUserData(userData);
@@ -135,7 +140,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         setIsAdmin(userData?.isAdmin || false);
         return userData;
       } else {
-        // Document doesn't exist, likely due to a race condition
         const newUserData = await createUserDocIfNeeded(user);
         return newUserData;
       }
@@ -144,14 +148,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       return null;
     }
   };
-  
+
   const setUserMode = async (newMode: UserMode) => {
     if (!user) return;
-    
+
     setMode(newMode);
     await updateUserData({ mode: newMode });
   };
-  
+
   return (
     <UserContext.Provider value={{ 
       user, 
