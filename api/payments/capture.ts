@@ -82,7 +82,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userData = userDoc.data()!;
     const transactions = userData.icTransactions || [];
 
-    // 🛑 Prevent repeat processing
     const alreadyCaptured = transactions.some(
       (tx: any) =>
         tx.type === 'paypal' &&
@@ -109,6 +108,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       return tx;
     });
+
+    // ✅ Fallback: append new completed transaction if no match found
+    const hasCompleted = updatedTransactions.some(
+      (tx: any) =>
+        tx.type === 'paypal' &&
+        tx.amount === amountCaptured &&
+        tx.status === 'completed'
+    );
+
+    if (!hasCompleted) {
+      updatedTransactions.push({
+        type: 'paypal',
+        amount: amountCaptured,
+        status: 'completed',
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     const updatedBalance = (userData.icBalance || 0) + amountCaptured;
 
