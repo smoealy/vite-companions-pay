@@ -12,7 +12,7 @@ const db = getFirestore();
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Change for production
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Use live for production
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -26,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Step 1: Get PayPal token
+    // Step 1: Get PayPal Access Token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -36,7 +36,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: 'grant_type=client_credentials',
     });
 
-    const { access_token } = await tokenRes.json();
+    const tokenData = await tokenRes.json();
+    const access_token = tokenData.access_token;
 
     // Step 2: Create PayPal Order
     const orderRes = await fetch(`${BASE_URL}/v2/checkout/orders`, {
@@ -57,8 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
         ],
         application_context: {
-          return_url: 'https://yourdomain.com/paypal/success',
-          cancel_url: 'https://yourdomain.com/paypal/cancel',
+          return_url: 'https://ihram-journey-wallet.vercel.app/paypal-success',
+          cancel_url: 'https://ihram-journey-wallet.vercel.app/paypal-cancel',
         },
       }),
     });
@@ -70,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'No approval URL found from PayPal.' });
     }
 
-    // Step 3: Log to Firestore
+    // Step 3: Log transaction in Firestore
     const userRef = db.collection('users').doc(userId);
     await userRef.set(
       {
