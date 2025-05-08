@@ -1,10 +1,13 @@
-// File: src/components/wallet/TopUpModal.tsx
 import React, { useState } from 'react';
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from '@/hooks/use-toast';
 import {
-  Dialog, DialogContent, DialogDescription,
-  DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,16 +30,25 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
     setErrorMessage(null);
 
     if (!userData) {
-      toast({ title: "Not authenticated", description: "Please sign in.", variant: "destructive" });
+      toast({
+        title: "Not authenticated",
+        description: "Please sign in to top up your balance.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-      toast({ title: "Invalid amount", description: "Enter a valid number", variant: "destructive" });
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid amount greater than zero.",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
+
     try {
       const res = await fetch('/api/payments/paypal', {
         method: 'POST',
@@ -48,24 +60,37 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
         }),
       });
 
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
+      const text = await res.text(); // read raw response
+      if (!res.ok) {
         throw new Error(`Unexpected response from server: ${text}`);
       }
 
-      if (!res.ok || !data?.approvalUrl) {
-        throw new Error(data?.error || 'Failed to create PayPal order.');
+      let data;
+      try {
+        data = JSON.parse(text); // safely parse
+      } catch (err) {
+        throw new Error("Invalid response format from server.");
       }
 
-      toast({ title: "Redirecting to PayPal...", description: "Please complete your payment." });
+      if (!data?.approvalUrl) {
+        throw new Error("No approval URL returned from PayPal.");
+      }
+
+      toast({
+        title: "Redirecting to PayPal...",
+        description: "Please complete your payment in the new tab.",
+      });
+
+      // ✅ Redirect without using window.open or window.close
       window.location.href = data.approvalUrl;
-    } catch (err: any) {
-      console.error("PayPal Error:", err);
-      setErrorMessage(err.message || "Something went wrong.");
-      toast({ title: "Payment Error", description: err.message || "Please try again.", variant: "destructive" });
+    } catch (error: any) {
+      console.error("PayPal Error:", error);
+      setErrorMessage(error.message || "Payment failed. Please try again.");
+      toast({
+        title: "Payment Error",
+        description: error.message || "Could not start PayPal checkout.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -78,7 +103,9 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Top Up Balance</DialogTitle>
-          <DialogDescription>Add Ihram Credits using PayPal</DialogDescription>
+          <DialogDescription>
+            Add Ihram Credits (IC) using PayPal.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-4 space-y-4">
@@ -91,8 +118,9 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="mt-2"
+              placeholder="Enter amount"
             />
-            <p className="text-xs text-muted-foreground mt-1">1 USD = 1 IC</p>
+            <p className="text-xs text-muted-foreground mt-1">1 USD = 1 Ihram Credit (IC)</p>
           </div>
 
           <div>
@@ -101,6 +129,7 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
               {predefinedAmounts.map((value) => (
                 <Button
                   key={value}
+                  type="button"
                   variant={amount === value ? "default" : "outline"}
                   onClick={() => setAmount(value)}
                   className="w-full"
