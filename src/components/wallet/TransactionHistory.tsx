@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUser } from "../../../contexts/UserContext";
+import { useUser } from "@/contexts/UserContext";
 import { getICTransactions, ActivityType, ActivityLog } from '@/utils/firestoreService';
 
 interface TransactionHistoryProps {
