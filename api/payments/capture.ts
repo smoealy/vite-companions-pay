@@ -1,4 +1,4 @@
-// api/payments/capture.ts
+// File: api/payments/capture.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
@@ -12,10 +12,12 @@ const db = getFirestore();
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Change to live for production
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Change for production
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
   const { orderId, userId } = req.body;
 
@@ -24,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Step 1: Get access token
+    // Get PayPal token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -35,39 +37,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const tokenData = await tokenRes.json();
-    const accessToken = tokenData.access_token;
+    const access_token = tokenData.access_token;
 
-    // Step 2: Capture the order
+    // Capture payment
     const captureRes = await fetch(`${BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${access_token}`,
         'Content-Type': 'application/json',
       },
     });
 
     const captureData = await captureRes.json();
-    const status = captureData.status;
+
+    // Get amount
     const amount = captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value;
 
-    if (status === 'COMPLETED') {
-      // ✅ Update Firestore from pending → completed
-      const userRef = db.collection('users').doc(userId);
-      const userSnap = await userRef.get();
-      const txs = (userSnap.data()?.icTransactions || []) as any[];
-
-      const updatedTxs = txs.map(tx =>
-        tx.status === 'pending' && tx.amount === parseFloat(amount)
-          ? { ...tx, status: 'completed' }
-          : tx
-      );
-
-      await userRef.update({ icTransactions: updatedTxs });
+    if (!amount) {
+      return res.status(500).json({ error: 'Unable to read capture amount.' });
     }
 
-    return res.status(200).json({ status });
+    // Update Firestore
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    const existing = userDoc.data();
+
+    await userRef.update({
+      icBalance: (existing?.icBalance || 0) + parseFloat(amount),
+      icTransactions: [
+        ...(existing?.icTransactions || []),
+        {
+          type: 'paypal',
+          amount: parseFloat(amount),
+          timestamp: new Date().toISOString(),
+          status: 'completed',
+        },
+      ],
+    });
+
+    return res.status(200).json({ success: true, amount });
   } catch (err) {
-    console.error('PayPal capture error:', err);
-    return res.status(500).json({ error: 'Capture failed' });
+    console.error('Capture error:', err);
+    return res.status(500).json({ error: 'Capture failed.' });
   }
 }
