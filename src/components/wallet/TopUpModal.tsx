@@ -1,3 +1,4 @@
+// File: src/components/dashboard/TopUpModal.tsx
 import React, { useState } from 'react';
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from '@/hooks/use-toast';
@@ -32,16 +33,17 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
     if (!userData) {
       toast({
         title: "Not authenticated",
-        description: "Please sign in to top up your balance",
+        description: "Please sign in to top up your balance.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+    const numericAmount = parseFloat(amount);
+    if (!amount || isNaN(numericAmount) || numericAmount <= 0) {
       toast({
         title: "Invalid amount",
-        description: "Please enter a valid amount greater than zero",
+        description: "Please enter a valid amount greater than zero.",
         variant: "destructive",
       });
       return;
@@ -54,29 +56,23 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: parseFloat(amount).toFixed(2),
+          amount: numericAmount.toFixed(2),
           userId: userData.uid,
           email: userData.email || '',
         }),
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`PayPal error: ${res.status} - ${text}`);
-      }
-
       const data = await res.json();
 
-      if (!data?.approvalUrl) {
-        throw new Error("No approval URL received from PayPal.");
+      if (!res.ok || !data?.approvalUrl) {
+        throw new Error(data?.error || 'PayPal approval URL not received.');
       }
 
-      // ✅ Redirect directly using `location.href` (safe alternative to window.open)
-      window.location.assign(data.approvalUrl);
+      window.location.href = data.approvalUrl;
 
     } catch (error: any) {
       console.error("PayPal Error:", error);
-      setErrorMessage(error.message || "Payment failed. Please try again.");
+      setErrorMessage(error.message || "Something went wrong. Please try again.");
       toast({
         title: "Payment Error",
         description: error.message || "Could not start PayPal checkout.",
@@ -99,46 +95,44 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
-          <div>
-            <Label htmlFor="amount">Amount (USD)</Label>
-            <Input
-              id="amount"
-              type="number"
-              min="1"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Enter amount"
-              className="mt-2"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              1 USD = 1 Ihram Credit (IC)
-            </p>
-          </div>
-
-          <div>
-            <Label>Quick Select</Label>
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {predefinedAmounts.map((value) => (
-                <Button
-                  key={value}
-                  type="button"
-                  variant={amount === value ? "default" : "outline"}
-                  onClick={() => setAmount(value)}
-                  className="w-full"
-                >
-                  ${value}
-                </Button>
-              ))}
+        <div className="py-4">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="amount">Amount (USD)</Label>
+              <Input
+                id="amount"
+                type="number"
+                min="1"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="mt-2"
+              />
+              <p className="text-xs text-muted-foreground mt-1">1 USD = 1 Ihram Credit (IC)</p>
             </div>
-          </div>
 
-          {errorMessage && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
-              <div className="text-sm text-red-800">{errorMessage}</div>
+            <div>
+              <Label>Quick Select</Label>
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {predefinedAmounts.map((value) => (
+                  <Button
+                    key={value}
+                    variant={amount === value ? "default" : "outline"}
+                    onClick={() => setAmount(value)}
+                    className="w-full"
+                  >
+                    ${value}
+                  </Button>
+                ))}
+              </div>
             </div>
-          )}
+
+            {errorMessage && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start space-x-3">
+                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                <p className="text-sm text-red-800">{errorMessage}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
