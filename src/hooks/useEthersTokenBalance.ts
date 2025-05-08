@@ -3,7 +3,6 @@ import { ethers } from 'ethers';
 import { tokenAbi, tokenAddress } from '@/lib/tokenAbi';
 import { useAccount } from 'wagmi';
 
-// Declare global ethereum object for TypeScript
 declare global {
   interface Window {
     ethereum?: any;
@@ -22,48 +21,53 @@ export const useEthersTokenBalance = () => {
       setError(null);
 
       try {
-        if (!window.ethereum) {
-          console.log("No ethereum provider found");
-          setError("No wallet detected");
-          setIsLoading(false);
-          return;
-        }
+        let provider;
+        let connectedAddress = address;
 
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        if (typeof window !== 'undefined' && window.ethereum) {
+          provider = new ethers.providers.Web3Provider(window.ethereum);
 
-        // ✅ FIX FOR SAFARI/MOBILE – get connected address directly
-        const accounts = await provider.listAccounts();
-        const connectedAddress = address || accounts?.[0];
-        if (!connectedAddress) {
-          setError("No wallet connected");
-          setIsLoading(false);
-          return;
+          // ✅ Fix for Safari/Mobile WalletConnect
+          const accounts = await provider.listAccounts();
+          connectedAddress = address || accounts?.[0];
+
+          if (!connectedAddress) {
+            throw new Error('No wallet connected');
+          }
+
+          console.log('Ethers: Connected address:', connectedAddress);
+        } else if (isConnected && address) {
+          // ✅ Fallback for Safari (no window.ethereum)
+          provider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/eth');
+          connectedAddress = address;
+          console.warn('Fallback: Using RPC provider for:', connectedAddress);
+        } else {
+          throw new Error('No Ethereum provider or connected wallet');
         }
-        console.log("Ethers: Connected address:", connectedAddress);
 
         const contract = new ethers.Contract(tokenAddress, tokenAbi, provider);
 
-        // Get decimals
+        // Get token decimals
         let decimals = 18;
         try {
           const rawDecimals = await contract.decimals();
           decimals = Number(rawDecimals);
-          console.log("Ethers: Token decimals:", decimals);
+          console.log('Ethers: Token decimals:', decimals);
         } catch (err) {
-          console.error("Ethers: Failed to get decimals, using default 18");
+          console.error('Ethers: Failed to get decimals, using default 18');
         }
 
         // Get balance
         const rawBalance = await contract.balanceOf(connectedAddress);
-        console.log("Ethers: Raw balance:", rawBalance.toString());
+        console.log('Ethers: Raw balance:', rawBalance.toString());
 
         const formatted = ethers.utils.formatUnits(rawBalance, decimals);
-        console.log("Ethers: Formatted balance:", formatted);
+        console.log('Ethers: Formatted balance:', formatted);
 
         setBalance(formatted);
       } catch (err: any) {
-        console.error("Ethers Token Balance Error:", err);
-        setError(err?.message || "Failed to get balance");
+        console.error('Ethers Token Balance Error:', err);
+        setError(err?.message || 'Failed to get balance');
         setBalance('0');
       } finally {
         setIsLoading(false);
@@ -75,22 +79,25 @@ export const useEthersTokenBalance = () => {
     } else {
       setIsLoading(false);
     }
-  }, [isConnected, address]); // ✅ FIX: re-run when wallet address changes
+  }, [isConnected, address]);
 
   const refreshBalance = async () => {
     if (isConnected) {
       try {
         setIsLoading(true);
-        if (!window.ethereum) {
-          throw new Error("No ethereum provider found");
-        }
+        let provider;
+        let connectedAddress = address;
 
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        if (typeof window !== 'undefined' && window.ethereum) {
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          const accounts = await provider.listAccounts();
+          connectedAddress = address || accounts?.[0];
 
-        const accounts = await provider.listAccounts();
-        const connectedAddress = address || accounts?.[0];
-        if (!connectedAddress) {
-          throw new Error("No wallet connected");
+          if (!connectedAddress) {
+            throw new Error('No wallet connected');
+          }
+        } else {
+          provider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/eth');
         }
 
         const contract = new ethers.Contract(tokenAddress, tokenAbi, provider);
@@ -99,8 +106,8 @@ export const useEthersTokenBalance = () => {
         try {
           const rawDecimals = await contract.decimals();
           decimals = Number(rawDecimals);
-        } catch (err) {
-          console.warn("Failed to get decimals, using default 18");
+        } catch {
+          console.warn('Fallback: Using default 18 decimals');
         }
 
         const rawBalance = await contract.balanceOf(connectedAddress);
@@ -108,8 +115,8 @@ export const useEthersTokenBalance = () => {
         setBalance(formatted);
         setError(null);
       } catch (err: any) {
-        console.error("Error refreshing balance:", err);
-        setError(err?.message || "Failed to refresh balance");
+        console.error('Error refreshing balance:', err);
+        setError(err?.message || 'Failed to refresh balance');
       } finally {
         setIsLoading(false);
       }
