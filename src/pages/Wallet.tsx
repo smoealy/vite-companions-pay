@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -57,7 +56,8 @@ const Wallet = () => {
     }
   }, [searchParams, toast, navigate, refreshUserData]);
   
-  const balance = userData?.balance || 0;
+  // ✅ Corrected line: use icBalance instead of balance
+  const balance = userData?.icBalance || 0;
   
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-white to-cp-cream/30">
