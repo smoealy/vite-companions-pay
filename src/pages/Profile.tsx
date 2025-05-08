@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, LogOut, Settings, User, Calendar, Download, Pencil } from 'lucide-react';
+import { ChevronLeft, LogOut, Settings, User, Calendar, Download, Pencil, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -12,29 +12,32 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from "@/contexts/UserContext";
 import { signOut } from '../auth';
-import { getICTransactions } from '@/utils/firestoreService';
+import { getICTransactions, updateUserProfile } from '@/utils/firestoreService';
 
 const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { userData, user } = useUser();
+  const { userData, user, refreshUserData } = useUser();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const name = userData?.name || 'Pilgrim';
-  const email = userData?.email || user?.email || 'Not available';
-  const country = userData?.country || '—';
-  const phone = userData?.phone || null;
-  const wallet = userData?.wallet || null;
+  const [formData, setFormData] = useState({
+    name: userData?.name || '',
+    country: userData?.country || '',
+    phone: userData?.phone || '',
+  });
+
   const joinedDate = user?.metadata?.creationTime
     ? new Date(user.metadata.creationTime).toLocaleDateString()
     : '—';
-
   const totalTokens = userData?.icBalance || 0;
 
   const handleLogout = async () => {
@@ -62,6 +65,29 @@ const Profile = () => {
     });
   };
 
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await updateUserProfile(user?.uid, {
+        name: formData.name,
+        country: formData.country,
+        phone: formData.phone,
+      });
+      toast({ title: "Profile Updated" });
+      setEditMode(false);
+      refreshUserData();
+    } catch (error) {
+      console.error("Profile update error:", error);
+      toast({
+        title: "Update Failed",
+        description: "Could not update profile. Try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     const fetchTx = async () => {
       if (!user?.uid) return;
@@ -79,7 +105,6 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cp-green-50 to-white">
-      {/* Header */}
       <div className="bg-white border-b shadow-sm p-4">
         <div className="flex items-center">
           <Button
@@ -94,26 +119,47 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="p-6 max-w-md mx-auto space-y-6">
-        {/* User Info */}
         <Card className="overflow-hidden shadow-sm border-none">
           <div className="bg-gradient-to-r from-cp-green-600 to-cp-green-700 p-6">
-            <div className="flex items-center">
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mr-4 shadow-md">
-                <User size={32} className="text-cp-green-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mr-4 shadow-md">
+                  <User size={32} className="text-cp-green-600" />
+                </div>
+                <div className="text-white">
+                  <div className="text-xl font-semibold">{formData.name || 'Pilgrim'}</div>
+                  <div className="text-white/80">{userData?.email || user?.email || 'Not available'}</div>
+                </div>
               </div>
-              <div className="text-white">
-                <div className="text-xl font-semibold">{name}</div>
-                <div className="text-white/80">{email}</div>
-              </div>
+              {!editMode ? (
+                <Button variant="ghost" size="icon" onClick={() => setEditMode(true)}>
+                  <Pencil className="text-white" size={18} />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  <Save className="text-white" size={18} />
+                </Button>
+              )}
             </div>
           </div>
           <CardContent className="p-6 space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="text-sm text-cp-neutral-500">Country</div>
-                <div className="font-medium">{country}</div>
+                {editMode ? (
+                  <Input
+                    value={formData.country}
+                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  />
+                ) : (
+                  <div className="font-medium">{formData.country || '—'}</div>
+                )}
               </div>
               <div>
                 <div className="text-sm text-cp-neutral-500">Member Since</div>
@@ -124,31 +170,18 @@ const Profile = () => {
                 <div className="font-medium">{totalTokens.toLocaleString()} IC</div>
               </div>
             </div>
-
-            {phone && (
-              <div>
-                <div className="text-sm text-cp-neutral-500">Phone</div>
-                <div className="font-medium">{phone}</div>
-              </div>
-            )}
-
-            {wallet && (
-              <div>
-                <div className="text-sm text-cp-neutral-500">Wallet Address</div>
-                <div className="font-medium break-all">{wallet}</div>
-              </div>
-            )}
-
-            <div className="pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-cp-green-700 border-cp-green-300 flex items-center gap-1"
-                onClick={() => navigate('/settings')}
-              >
-                <Pencil size={14} />
-                Edit Profile
-              </Button>
+            <div>
+              <div className="text-sm text-cp-neutral-500 mb-1">Phone Number</div>
+              {editMode ? (
+                <Input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="Optional"
+                />
+              ) : (
+                <div className="font-medium">{formData.phone || '—'}</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -171,7 +204,6 @@ const Profile = () => {
                 Export
               </Button>
             </div>
-
             <div className="space-y-4">
               {loading ? (
                 <p className="text-sm text-cp-neutral-500">Loading...</p>
@@ -220,7 +252,7 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* Settings + Logout */}
+        {/* Buttons */}
         <div className="grid grid-cols-2 gap-4">
           <Button
             variant="outline"
@@ -230,7 +262,6 @@ const Profile = () => {
             <Settings size={18} />
             Settings
           </Button>
-
           <Button
             variant="outline"
             className="border-cp-neutral-300 text-cp-neutral-700 flex gap-2"
