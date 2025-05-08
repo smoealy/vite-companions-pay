@@ -1,9 +1,4 @@
 {
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "vercel/node"
-    }
-  },
   "builds": [
     {
       "src": "api/**/*.ts",
