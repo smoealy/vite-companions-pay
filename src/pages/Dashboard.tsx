@@ -1,5 +1,4 @@
-// File: src/pages/Dashboard.tsx
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
@@ -11,12 +10,15 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { refreshUserData, userData } = useUser();
+  const [captured, setCaptured] = useState(false); // NEW
 
   useEffect(() => {
     const paypalStatus = searchParams.get('paypal');
     const orderId = searchParams.get('token');
 
-    if (paypalStatus === 'success' && orderId && userData?.uid) {
+    if (!captured && paypalStatus === 'success' && orderId && userData?.uid) {
+      setCaptured(true); // prevent refiring
+
       toast({
         title: 'Finalizing Payment...',
         description: 'Please wait while we confirm your transaction.',
@@ -28,19 +30,20 @@ const Dashboard = () => {
         body: JSON.stringify({ orderId, userId: userData.uid }),
       })
         .then((res) => res.json())
-        .then(async (data) => {
+        .then((data) => {
           if (data.success) {
             toast({
               title: 'Payment Successful',
               description: `You added $${data.amount} in Ihram Credits.`,
             });
-            await refreshUserData(); // ✅ Make sure the UI is updated after fetch
+            refreshUserData();
           } else {
             toast({
               title: 'Payment Error',
               description: data.error || 'Unable to finalize PayPal payment.',
               variant: 'destructive',
             });
+            setCaptured(false); // allow retry if error
           }
         })
         .catch((err) => {
@@ -50,6 +53,7 @@ const Dashboard = () => {
             description: 'There was an issue finalizing your payment.',
             variant: 'destructive',
           });
+          setCaptured(false);
         });
     } else if (paypalStatus === 'cancel') {
       toast({
@@ -58,7 +62,7 @@ const Dashboard = () => {
         variant: 'destructive',
       });
     }
-  }, [searchParams, toast, userData, refreshUserData]);
+  }, [searchParams, toast, userData, refreshUserData, captured]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-cp-cream/30">
@@ -70,3 +74,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
