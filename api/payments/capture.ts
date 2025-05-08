@@ -30,6 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // 1. Get PayPal Access Token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -46,6 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Unable to authenticate with PayPal' });
     }
 
+    // 2. Capture Payment
     const captureRes = await fetch(`${BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
@@ -69,6 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid capture amount from PayPal' });
     }
 
+    // 3. Prevent Duplicate
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
@@ -79,6 +82,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userData = userDoc.data()!;
     const transactions = userData.icTransactions || [];
 
+    // 🛑 Prevent repeat processing
+    const alreadyCaptured = transactions.some(
+      (tx: any) =>
+        tx.type === 'paypal' &&
+        tx.amount === amountCaptured &&
+        tx.status === 'completed'
+    );
+
+    if (alreadyCaptured) {
+      return res.status(200).json({
+        success: true,
+        message: 'Already captured',
+        amount: amountCaptured,
+      });
+    }
+
+    // 4. Update balance and transaction status
     const updatedTransactions = transactions.map((tx: any) => {
       if (
         tx.type === 'paypal' &&
@@ -100,7 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { merge: true }
     );
 
-    // ✅ Log PayPal top-up to activity_logs
+    // 5. Add activity log
     await db.collection('activity_logs').add({
       uid: userId,
       type: 'paypal',
