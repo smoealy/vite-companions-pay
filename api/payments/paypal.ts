@@ -12,7 +12,7 @@ const db = getFirestore();
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Use live for production
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Switch to live URL for production
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -58,8 +58,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
         ],
         application_context: {
-          return_url: 'https://ihram-journey-wallet.vercel.app/paypal-success',
-          cancel_url: 'https://ihram-journey-wallet.vercel.app/paypal-cancel',
+          return_url: 'https://vite-companions-pay.vercel.app/dashboard?paypal=success',
+          cancel_url: 'https://vite-companions-pay.vercel.app/dashboard?paypal=cancel',
         },
       }),
     });
