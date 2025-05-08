@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from "../../contexts/UserContext";
+import { useUser } from "@/contexts/UserContext";
 import { submitUmrahRedemption } from '@/utils/firebase/redemptionService';
 import { sendConfirmationEmail } from '@/firestore';
 import { logActivity } from '@/utils/firebase/activityService';
