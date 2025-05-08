@@ -50,6 +50,7 @@
     "embla-carousel-react": "^8.3.0",
     "ethers": "^5.7.2",
     "firebase": "^9.23.0",
+    "firebase-admin": "^11.10.1",
     "framer-motion": "^12.9.4",
     "http-proxy-middleware": "^3.0.5",
     "input-otp": "^1.2.4",
