@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { useUser } from "../../../contexts/UserContext";
 import { useToast } from '@/hooks/use-toast';
-import { createCheckoutSession } from '@/utils/stripeUtils';
 import {
   Dialog,
   DialogContent,
@@ -28,10 +26,9 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const handleTopUp = async () => {
-    // Reset error state
+  const handlePayPalCheckout = async () => {
     setErrorMessage(null);
-    
+
     if (!userData) {
       toast({
         title: "Not authenticated",
@@ -40,7 +37,7 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
       });
       return;
     }
-    
+
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
       toast({
         title: "Invalid amount",
@@ -49,59 +46,56 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
       });
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
-      toast({
-        title: "Processing",
-        description: "Creating your checkout session...",
+      const response = await fetch('/api/payments/paypal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(amount).toFixed(2),
+          userId: userData.uid,
+        }),
       });
-      
-      await createCheckoutSession(
-        parseFloat(amount), 
-        userData.uid, 
-        userData.email || ''
-      );
-      
-      // If createCheckoutSession doesn't redirect or throw, show this message
+
+      const data = await response.json();
+
+      if (!data.approvalUrl) {
+        throw new Error("No PayPal approval URL returned.");
+      }
+
       toast({
-        title: "Redirecting",
-        description: "Taking you to the payment page...",
+        title: "Redirecting...",
+        description: "You'll be taken to PayPal to complete your payment.",
       });
-      
-    } catch (error) {
-      setLoading(false);
-      console.error('Error creating checkout session:', error);
-      
-      // Set error message for display
-      const errorMsg = error instanceof Error ? 
-        error.message : 
-        "Failed to process payment. Please try again.";
-      
-      setErrorMessage(errorMsg);
-      
-      // Show a more user-friendly message in the toast
+
+      window.location.href = data.approvalUrl;
+    } catch (error: any) {
+      console.error("PayPal Error:", error);
+      setErrorMessage(error.message || "Payment failed. Please try again.");
       toast({
         title: "Payment Error",
-        description: "Could not create checkout session. Please try again later.",
+        description: "Could not start PayPal payment. Please try again later.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
-  
+
   const predefinedAmounts = ['50', '100', '200', '500'];
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Top Up Balance</DialogTitle>
           <DialogDescription>
-            Add IHRAM tokens to your wallet
+            Add Ihram Credits (IC) using PayPal
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="py-4">
           <div className="space-y-4">
             <div>
@@ -115,9 +109,9 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
                 className="mt-2"
                 placeholder="Enter amount"
               />
-              <p className="text-xs text-muted-foreground mt-1">1 USD = 1 IHRAM token</p>
+              <p className="text-xs text-muted-foreground mt-1">1 USD = 1 Ihram Credit (IC)</p>
             </div>
-            
+
             <div>
               <Label>Quick Select</Label>
               <div className="grid grid-cols-4 gap-2 mt-2">
@@ -134,7 +128,7 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
                 ))}
               </div>
             </div>
-            
+
             {errorMessage && (
               <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start space-x-3">
                 <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -143,14 +137,14 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
             )}
           </div>
         </div>
-        
+
         <DialogFooter>
-          <Button 
-            onClick={handleTopUp} 
+          <Button
+            onClick={handlePayPalCheckout}
             className="w-full gradient-green"
             disabled={loading}
           >
-            {loading ? "Processing..." : "Proceed to Payment"}
+            {loading ? "Redirecting..." : "Pay with PayPal"}
           </Button>
         </DialogFooter>
       </DialogContent>
