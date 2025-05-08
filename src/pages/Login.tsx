@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,12 +7,14 @@ import { signInWithGoogle } from '@/auth';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from "@/contexts/UserContext";
 import Footer from '@/components/ui-components/Footer';
+import EmailAuthModal from '@/components/ui-components/EmailAuthModal'; // ✅ ADDED
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const { user } = useUser();
+  const [emailModalOpen, setEmailModalOpen] = useState(false); // ✅ ADDED
   
   // Redirect if already logged in
   useEffect(() => {
@@ -46,15 +47,10 @@ const Login = () => {
   };
 
   const handleEmailSignIn = () => {
-    // To be implemented
-    toast({
-      title: "Coming Soon",
-      description: "Email sign-in will be available soon!",
-    });
+    setEmailModalOpen(true); // ✅ MODIFIED
   };
 
   const handleAppleSignIn = () => {
-    // To be implemented
     toast({
       title: "Coming Soon",
       description: "Apple sign-in will be available soon!",
@@ -151,6 +147,8 @@ const Login = () => {
             </div>
             <span className="text-xs">Shariah-Compliant Platform</span>
           </motion.div>
+
+          <EmailAuthModal open={emailModalOpen} onClose={() => setEmailModalOpen(false)} /> {/* ✅ ADDED */}
         </motion.div>
       </div>
       
