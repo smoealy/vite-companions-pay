@@ -1,9 +1,9 @@
+// File: api/payments/paypal.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// ✅ Firebase Admin SDK Init
 if (!getApps().length) {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
   initializeApp({ credential: cert(serviceAccount) });
@@ -12,7 +12,7 @@ const db = getFirestore();
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID!;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET!;
-const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Switch to live URL for production
+const BASE_URL = 'https://api-m.sandbox.paypal.com'; // Change to live URL for prod
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -20,13 +20,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const { amount, userId } = req.body;
-
   if (!amount || !userId) {
     return res.status(400).json({ error: 'Missing amount or userId' });
   }
 
   try {
-    // Step 1: Get PayPal Access Token
+    // Step 1: Get PayPal access token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -35,11 +34,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: 'grant_type=client_credentials',
     });
-
     const tokenData = await tokenRes.json();
     const access_token = tokenData.access_token;
 
-    // Step 2: Create PayPal Order
+    // Step 2: Create PayPal order
     const orderRes = await fetch(`${BASE_URL}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
@@ -58,8 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
         ],
         application_context: {
-          return_url: 'https://vite-companions-pay.vercel.app/dashboard?paypal=success',
-          cancel_url: 'https://vite-companions-pay.vercel.app/dashboard?paypal=cancel',
+          return_url: `https://vite-companions-pay.vercel.app/dashboard?paypal=success`,
+          cancel_url: `https://vite-companions-pay.vercel.app/dashboard?paypal=cancel`,
         },
       }),
     });
@@ -68,10 +66,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const approvalUrl = orderData.links?.find((l: any) => l.rel === 'approve')?.href;
 
     if (!approvalUrl) {
-      return res.status(500).json({ error: 'No approval URL found from PayPal.' });
+      return res.status(500).json({ error: 'No approval URL from PayPal.' });
     }
 
-    // Step 3: Log transaction in Firestore
+    // Step 3: Log transaction
     const userRef = db.collection('users').doc(userId);
     await userRef.set(
       {
