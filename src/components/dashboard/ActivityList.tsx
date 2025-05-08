@@ -1,3 +1,4 @@
+// File: src/components/dashboard/ActivityList.tsx
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpDown } from 'lucide-react';
@@ -31,16 +32,14 @@ const ActivityList: React.FC<ActivityListProps> = ({ earnedToday }) => {
     };
 
     fetchActivities();
-  }, [user]);
+  }, [user, earnedToday]); // ✅ auto-refresh on balance change
 
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'Unknown date';
     
-    // Firebase timestamp handling
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    
-    // If today, return "Today"
     const today = new Date();
+
     if (
       date.getDate() === today.getDate() &&
       date.getMonth() === today.getMonth() &&
@@ -48,12 +47,11 @@ const ActivityList: React.FC<ActivityListProps> = ({ earnedToday }) => {
     ) {
       return 'Today';
     }
-    
-    // Otherwise return formatted date
+
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     }).format(date);
   };
 
