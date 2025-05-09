@@ -1,9 +1,10 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { listenToTokenPurchases } from '@/utils/firestoreService';
+import { exportToCSV } from '@/utils/exportCSV';
 
 interface TokenPurchase {
   id: string;
@@ -16,26 +17,28 @@ interface TokenPurchase {
   walletAddress?: string;
 }
 
-interface TokenPurchasesListProps {
-  purchases: TokenPurchase[];
-  isLoading: boolean;
-}
-
-const TokenPurchasesList: React.FC<TokenPurchasesListProps> = ({ purchases, isLoading }) => {
+const TokenPurchasesList: React.FC = () => {
+  const [purchases, setPurchases] = useState<TokenPurchase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationEnabled] = useState(true); // toggle if needed
+  const perPage = 5;
+
+  useEffect(() => {
+    const unsubscribe = listenToTokenPurchases((data: TokenPurchase[]) => {
+      setPurchases(data);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const formatDate = (timestamp: any) => {
     if (!timestamp) return 'Unknown';
-    
-    // Handle Firebase timestamp
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    
     return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric', month: 'short', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
     }).format(date);
   };
 
@@ -52,7 +55,7 @@ const TokenPurchasesList: React.FC<TokenPurchasesListProps> = ({ purchases, isLo
         return <span className="px-2 py-1 text-xs rounded-full bg-cp-neutral-100 text-cp-neutral-700">{status}</span>;
     }
   };
-  
+
   const filteredPurchases = searchQuery 
     ? purchases.filter(purchase => 
         purchase.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -60,14 +63,15 @@ const TokenPurchasesList: React.FC<TokenPurchasesListProps> = ({ purchases, isLo
         purchase.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : purchases;
-    
-  const exportToCSV = () => {
+
+  const totalPages = Math.ceil(filteredPurchases.length / perPage);
+  const paginatedPurchases = paginationEnabled
+    ? filteredPurchases.slice((currentPage - 1) * perPage, currentPage * perPage)
+    : filteredPurchases;
+
+  const exportCSV = () => {
     if (filteredPurchases.length === 0) return;
-    
-    // Create CSV headers
     const headers = ['Date', 'Amount (USD)', 'Tokens', 'Email/Wallet', 'Method', 'Status'];
-    
-    // Create CSV data
     const csvData = filteredPurchases.map(purchase => [
       formatDate(purchase.timestamp),
       purchase.amountUsd.toFixed(2),
@@ -76,27 +80,17 @@ const TokenPurchasesList: React.FC<TokenPurchasesListProps> = ({ purchases, isLo
       purchase.paymentMethod,
       purchase.status
     ]);
-    
-    // Combine headers and data
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.join(','))
-    ].join('\n');
-    
-    // Create a blob and download
+    const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
     const link = document.createElement('a');
     link.setAttribute('href', url);
     link.setAttribute('download', `token-purchases-${new Date().toISOString().slice(0, 10)}.csv`);
-    link.style.display = 'none';
-    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
-  
+
   return (
     <div>
       {/* Search and Export */}
@@ -107,22 +101,24 @@ const TokenPurchasesList: React.FC<TokenPurchasesListProps> = ({ purchases, isLo
             placeholder="Search by email, wallet or payment method..."
             className="w-full sm:w-80 px-4 py-2 text-sm border border-cp-neutral-200 rounded-md"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
-        
         <Button
           variant="outline"
           size="sm"
           disabled={isLoading || filteredPurchases.length === 0}
-          onClick={exportToCSV}
+          onClick={exportCSV}
           className="flex items-center gap-1"
         >
           <Download className="h-4 w-4" />
           Export CSV
         </Button>
       </div>
-      
+
       {/* Table */}
       <div className="border-t">
         {isLoading ? (
@@ -136,7 +132,7 @@ const TokenPurchasesList: React.FC<TokenPurchasesListProps> = ({ purchases, isLo
               </div>
             ))}
           </div>
-        ) : filteredPurchases.length > 0 ? (
+        ) : paginatedPurchases.length > 0 ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -149,7 +145,7 @@ const TokenPurchasesList: React.FC<TokenPurchasesListProps> = ({ purchases, isLo
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPurchases.map((purchase) => (
+                {paginatedPurchases.map((purchase) => (
                   <TableRow key={purchase.id}>
                     <TableCell className="text-sm">{formatDate(purchase.timestamp)}</TableCell>
                     <TableCell className="font-medium">
@@ -177,6 +173,19 @@ const TokenPurchasesList: React.FC<TokenPurchasesListProps> = ({ purchases, isLo
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {paginationEnabled && totalPages > 1 && (
+        <div className="flex justify-center gap-2 py-4">
+          <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+            Previous
+          </Button>
+          <span className="text-sm font-medium px-2">Page {currentPage} of {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
