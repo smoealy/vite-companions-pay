@@ -1,7 +1,16 @@
-import { getDoc, getDocs, doc, setDoc, updateDoc, collection, onSnapshot, query } from 'firebase/firestore';
+import {
+  getDoc,
+  getDocs,
+  doc,
+  setDoc,
+  updateDoc,
+  collection,
+  onSnapshot,
+  query
+} from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
-import { 
+import {
   getUserData,
   updateUserData,
   incrementBalance,
@@ -22,7 +31,7 @@ import {
 } from './firebase/activityService';
 
 // ✅ IC Activity Types
-export type ActivityType = 
+export type ActivityType =
   | 'paypal'
   | 'reward'
   | 'redemption'
@@ -44,16 +53,16 @@ export const getICBalance = async (uid: string): Promise<number> => {
   return userSnap.data().icBalance || 0;
 };
 
-// ✅ Deduct IC (Used during redemption)
-export const deductICBalance = async (uid: string, amount: number): Promise<void> => {
+// ✅ Deduct IC
+export const deductICBalance = async (
+  uid: string,
+  amount: number
+): Promise<void> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
-
   if (!userSnap.exists()) throw new Error('User not found');
-
   const currentBalance = userSnap.data().icBalance || 0;
   if (amount > currentBalance) throw new Error('Insufficient balance');
-
   await updateDoc(userRef, {
     icBalance: currentBalance - amount
   });
@@ -64,13 +73,10 @@ export const deductICBalance = async (uid: string, amount: number): Promise<void
     amount: -amount,
     timestamp: new Date().toISOString()
   });
-
-  await updateDoc(userRef, {
-    icTransactions: txs
-  });
+  await updateDoc(userRef, { icTransactions: txs });
 };
 
-// ✅ Get IC Transaction History
+// ✅ Get IC Transactions
 export const getICTransactions = async (
   uid: string,
   limit: number = 10
@@ -78,9 +84,7 @@ export const getICTransactions = async (
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) return [];
-
-  const data = userSnap.data();
-  const txs = (data.icTransactions || []) as ActivityLog[];
+  const txs = (userSnap.data().icTransactions || []) as ActivityLog[];
 
   return txs
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -91,7 +95,7 @@ export const getICTransactions = async (
     }));
 };
 
-// ✅ Update User Profile Info
+// ✅ Update User Profile
 export const updateUserProfile = async (
   uid: string | undefined,
   data: Partial<{ name: string; country: string; phone: string }>
@@ -101,7 +105,7 @@ export const updateUserProfile = async (
   await setDoc(userRef, data, { merge: true });
 };
 
-// ✅ Get All Users With IC Balances
+// ✅ Get All Users With Balances
 export const getAllUsersWithBalances = async (): Promise<
   Array<{
     id: string;
@@ -114,46 +118,45 @@ export const getAllUsersWithBalances = async (): Promise<
 > => {
   const usersRef = collection(db, 'users');
   const querySnap = await getDocs(usersRef);
-
-  const users: Array<{
-    id: string;
-    email?: string;
-    wallet?: string;
-    role?: string;
-    createdAt?: any;
-    balance: number;
-  }> = [];
-
-  querySnap.forEach((docSnap) => {
+  return querySnap.docs.map(docSnap => {
     const data = docSnap.data();
-    users.push({
+    return {
       id: docSnap.id,
       email: data.email || '',
       wallet: data.walletAddress || '',
       role: data.role || 'user',
       createdAt: data.createdAt || null,
       balance: data.icBalance || 0
-    });
+    };
   });
-
-  return users;
 };
 
-// ✅ Listen to Token Purchases in Real-Time
+// ✅ Listen to Token Purchases
 export const listenToTokenPurchases = (
   callback: (data: any[]) => void
 ): (() => void) => {
   const q = query(collection(db, 'tokenPurchases'));
-
-  const unsubscribe = onSnapshot(q, (snapshot) => {
+  return onSnapshot(q, (snapshot) => {
     const purchases = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
     callback(purchases);
   });
+};
 
-  return unsubscribe;
+// ✅ Listen to Umrah Redemptions
+export const listenToRedemptions = (
+  callback: (data: any[]) => void
+): (() => void) => {
+  const q = query(collection(db, 'umrahRedemptions'));
+  return onSnapshot(q, (snapshot) => {
+    const redemptions = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(redemptions);
+  });
 };
 
 // 🔁 Re-export types
