@@ -17,19 +17,19 @@ interface Tier {
 const TIERS: Tier[] = [
   {
     name: 'bronze',
-    amount: 5000,
+    amount: 1250,
     label: 'Bronze Package',
     perks: ['Standard hotels', 'Group transport', '3-star rating']
   },
   {
     name: 'silver',
-    amount: 10000,
+    amount: 2500,
     label: 'Silver Package',
     perks: ['Premium hotels', 'Private car', '4-star rating']
   },
   {
     name: 'gold',
-    amount: 20000,
+    amount: 5000,
     label: 'Gold Package',
     perks: ['Luxury hotels', 'Full concierge', '5-star rating']
   }
@@ -63,7 +63,7 @@ const TierPackages: React.FC<Props> = ({ onRedeem }) => {
           <Card key={tier.name} className="p-6 flex flex-col items-center text-center shadow-md border border-cp-neutral-100">
             <h3 className="text-lg font-bold text-cp-green-800">{tier.label}</h3>
             <p className="text-cp-neutral-600 text-sm mt-1 mb-4">
-              {tier.amount.toLocaleString()} IC required
+              {tier.amount.toLocaleString()} Ihram Credits
             </p>
             <ul className="text-sm text-cp-neutral-500 mb-6 space-y-1">
               {tier.perks.map((perk, i) => (
@@ -89,7 +89,7 @@ const TierPackages: React.FC<Props> = ({ onRedeem }) => {
               {!affordable && (
                 <TooltipContent side="top">
                   <div className="flex items-center gap-2 text-xs text-cp-neutral-600">
-                    <Info size={14} /> You don’t have enough balance
+                    <Info size={14} /> You don’t have enough Ihram Credits
                   </div>
                 </TooltipContent>
               )}
