@@ -77,7 +77,6 @@ export const getICTransactions = async (
 ): Promise<Array<ActivityLog & { id: string }>> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
-
   if (!userSnap.exists()) return [];
 
   const data = userSnap.data();
@@ -173,6 +172,5 @@ export {
   getRedemptionStats,
   logActivity,
   getUserActivities,
-  logAdminAction,
-  getAllUsersWithBalances
+  logAdminAction
 };
