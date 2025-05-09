@@ -17,6 +17,12 @@ import { logActivity, getICBalance, deductICBalance } from '@/utils/firestoreSer
 import TierPackages from '@/components/umrah/TierPackages';
 import RedemptionForm from '@/components/umrah/RedemptionForm';
 
+const TIER_PRICES: Record<string, number> = {
+  bronze: 1250,
+  silver: 2500,
+  gold: 5000,
+};
+
 const RedeemUmrah = () => {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,23 +68,20 @@ const RedeemUmrah = () => {
     setIsSubmitting(true);
 
     try {
-      const tierTokens =
-        selectedTier === 'bronze' ? 5000 :
-        selectedTier === 'silver' ? 10000 : 20000;
+      const tierTokens = TIER_PRICES[selectedTier] ?? 0;
 
       const currentBalance = await getICBalance(user.uid);
 
       if (currentBalance < tierTokens) {
         toast({
           title: "Insufficient Balance",
-          description: `You need ${tierTokens.toLocaleString()} ICs but only have ${currentBalance.toLocaleString()}.`,
+          description: `You need ${tierTokens.toLocaleString()} Ihram Credits but only have ${currentBalance.toLocaleString()}.`,
           variant: "destructive"
         });
         setIsSubmitting(false);
         return;
       }
 
-      // Deduct ICs
       await deductICBalance(user.uid, tierTokens);
 
       const redemptionId = await submitUmrahRedemption({
