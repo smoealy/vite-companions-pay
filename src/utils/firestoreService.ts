@@ -145,11 +145,11 @@ export const listenToTokenPurchases = (
   });
 };
 
-// ✅ Listen to Umrah Redemptions
+// ✅ Listen to Umrah Redemptions — FIXED
 export const listenToRedemptions = (
   callback: (data: any[]) => void
 ): (() => void) => {
-  const q = query(collection(db, 'umrahRedemptions'));
+  const q = query(collection(db, 'redemptions'));
   return onSnapshot(q, (snapshot) => {
     const redemptions = snapshot.docs.map(doc => ({
       id: doc.id,
