@@ -1,4 +1,4 @@
-import { getDoc, getDocs, doc, setDoc, updateDoc, collection } from 'firebase/firestore';
+import { getDoc, getDocs, doc, setDoc, updateDoc, collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 import { 
@@ -40,7 +40,6 @@ export interface ActivityLog {
 export const getICBalance = async (uid: string): Promise<number> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
-
   if (!userSnap.exists()) return 0;
   return userSnap.data().icBalance || 0;
 };
@@ -59,7 +58,6 @@ export const deductICBalance = async (uid: string, amount: number): Promise<void
     icBalance: currentBalance - amount
   });
 
-  // Log the transaction
   const txs = userSnap.data().icTransactions || [];
   txs.unshift({
     type: 'redemption',
@@ -142,6 +140,23 @@ export const getAllUsersWithBalances = async (): Promise<
   return users;
 };
 
+// ✅ Listen to Token Purchases in Real-Time
+export const listenToTokenPurchases = (
+  callback: (data: any[]) => void
+): (() => void) => {
+  const q = query(collection(db, 'tokenPurchases'));
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const purchases = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(purchases);
+  });
+
+  return unsubscribe;
+};
+
 // 🔁 Re-export types
 export type { UmrahRedemptionData } from './firebase/redemptionService';
 export type { ActivityLog as LoggedActivity, ActivityType as LoggedActivityType } from './firebase/activityService';
@@ -158,5 +173,7 @@ export {
   getRedemptionStats,
   logActivity,
   getUserActivities,
-  logAdminAction
+  logAdminAction,
+  getAllUsersWithBalances,
+  listenToTokenPurchases
 };
