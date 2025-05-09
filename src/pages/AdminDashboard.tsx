@@ -11,6 +11,7 @@ import { getRedemptionStats, getUmrahRedemptions, UmrahRedemptionData } from '@/
 
 import UsersList from '@/components/admin/UsersList';
 import TokenPurchasesList from '@/components/admin/TokenPurchasesList';
+import CreditsList from '@/components/admin/CreditsList'; // ✅ Add this import
 
 type StatusFilterType = 'all' | 'pending' | 'reviewed' | 'contacted' | 'completed' | 'cancelled';
 
@@ -36,14 +37,8 @@ const AdminDashboard = () => {
   const [openSubmissionId, setOpenSubmissionId] = useState<string | null>(null);
 
   const countries = [
-    'United States',
-    'Saudi Arabia',
-    'United Kingdom',
-    'Canada',
-    'United Arab Emirates',
-    'Malaysia',
-    'Singapore',
-    'Indonesia'
+    'United States', 'Saudi Arabia', 'United Kingdom', 'Canada',
+    'United Arab Emirates', 'Malaysia', 'Singapore', 'Indonesia'
   ];
 
   useEffect(() => {
@@ -89,18 +84,17 @@ const AdminDashboard = () => {
     console.log("View details for:", submission);
   };
 
-  const getStatusBadge = (status: UmrahRedemptionData['status']) => {
-    return <span className="inline-block px-2 py-1 text-xs rounded-full">{status}</span>;
-  };
+  const getStatusBadge = (status: UmrahRedemptionData['status']) => (
+    <span className="inline-block px-2 py-1 text-xs rounded-full">{status}</span>
+  );
 
-  const getTierBadge = (tier: string) => {
-    return <span className="inline-block px-2 py-1 text-xs rounded-full">{tier}</span>;
-  };
+  const getTierBadge = (tier: string) => (
+    <span className="inline-block px-2 py-1 text-xs rounded-full">{tier}</span>
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-cp-neutral-50">
       <AdminHeader />
-
       <div className="container mx-auto px-4 py-6 flex-1">
         <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
 
@@ -109,40 +103,20 @@ const AdminDashboard = () => {
         <div className="mt-8 bg-white rounded-lg shadow-sm border border-cp-neutral-200">
           <Tabs defaultValue="redemptions" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid grid-cols-5 h-auto p-0 bg-cp-neutral-100">
-              <TabsTrigger
-                value="redemptions"
-                className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0"
-              >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Redemptions
+              <TabsTrigger value="redemptions" className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0">
+                <CreditCard className="h-4 w-4 mr-2" /> Redemptions
               </TabsTrigger>
-              <TabsTrigger
-                value="token-purchases"
-                className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0"
-              >
-                <Coins className="h-4 w-4 mr-2" />
-                Token Purchases
+              <TabsTrigger value="token-purchases" className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0">
+                <Coins className="h-4 w-4 mr-2" /> Token Purchases
               </TabsTrigger>
-              <TabsTrigger
-                value="users"
-                className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Users
+              <TabsTrigger value="users" className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0">
+                <Users className="h-4 w-4 mr-2" /> Users
               </TabsTrigger>
-              <TabsTrigger
-                value="credits"
-                className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0"
-              >
-                <DollarSign className="h-4 w-4 mr-2" />
-                Ihram Credits
+              <TabsTrigger value="credits" className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0">
+                <DollarSign className="h-4 w-4 mr-2" /> Ihram Credits
               </TabsTrigger>
-              <TabsTrigger
-                value="settings"
-                className="data-[state=active]:bg-white rounded-none py-3 data-[state=active]:border-b-0"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
+              <TabsTrigger value="settings" className="data-[state=active]:bg-white rounded-none py-3 data-[state=active]:border-b-0">
+                <Settings className="h-4 w-4 mr-2" /> Settings
               </TabsTrigger>
             </TabsList>
 
@@ -192,8 +166,7 @@ const AdminDashboard = () => {
 
             <TabsContent value="credits">
               <div className="p-4">
-                <p className="text-sm text-cp-neutral-600">This section will allow admin to adjust, view, or transfer user IC balances.</p>
-                <p className="mt-2 text-xs text-cp-neutral-400 italic">Coming soon — connect to Firestore balance logic.</p>
+                <CreditsList />
               </div>
             </TabsContent>
 
@@ -203,7 +176,6 @@ const AdminDashboard = () => {
           </Tabs>
         </div>
       </div>
-
       <Footer />
     </div>
   );
