@@ -40,6 +40,7 @@ export interface ActivityLog {
 export const getICBalance = async (uid: string): Promise<number> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
+
   if (!userSnap.exists()) return 0;
   return userSnap.data().icBalance || 0;
 };
@@ -48,7 +49,9 @@ export const getICBalance = async (uid: string): Promise<number> => {
 export const deductICBalance = async (uid: string, amount: number): Promise<void> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
+
   if (!userSnap.exists()) throw new Error('User not found');
+
   const currentBalance = userSnap.data().icBalance || 0;
   if (amount > currentBalance) throw new Error('Insufficient balance');
 
@@ -76,6 +79,7 @@ export const getICTransactions = async (
 ): Promise<Array<ActivityLog & { id: string }>> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
+
   if (!userSnap.exists()) return [];
 
   const data = userSnap.data();
@@ -154,6 +158,6 @@ export {
   getRedemptionStats,
   logActivity,
   getUserActivities,
-  logAdminAction,
-  getAllUsersWithBalances
+  logAdminAction
 };
+
