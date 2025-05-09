@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getAllUserActivityLogs } from '@/utils/firestoreService';
 import { exportToCSV } from '@/utils/exportCSV';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export type ActivityType =
   | 'paypal'
@@ -31,8 +32,8 @@ const CreditsList: React.FC = () => {
   const [activities, setActivities] = useState<ICActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activityType, setActivityType] = useState<'all' | ActivityType>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [paginationEnabled] = useState(true);
   const perPage = 10;
 
   useEffect(() => {
@@ -52,18 +53,16 @@ const CreditsList: React.FC = () => {
     }).format(date);
   };
 
-  const filtered = searchQuery
-    ? activities.filter(
-        log =>
-          log.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          log.type.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : activities;
+  const filtered = activities.filter(log => {
+    const matchesSearch = searchQuery
+      ? log.email.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+    const matchesType = activityType === 'all' || log.type === activityType;
+    return matchesSearch && matchesType;
+  });
 
   const totalPages = Math.ceil(filtered.length / perPage);
-  const paginated = paginationEnabled
-    ? filtered.slice((currentPage - 1) * perPage, currentPage * perPage)
-    : filtered;
+  const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   const exportCSV = () => {
     if (filtered.length === 0) return;
@@ -79,27 +78,46 @@ const CreditsList: React.FC = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `ic-activity-${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `ic-activity-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    document.body.removeChild(link);
   };
 
   return (
     <div>
-      {/* Search + Export */}
-      <div className="px-4 py-3 flex flex-col sm:flex-row justify-between gap-2">
+      {/* Filters */}
+      <div className="px-4 py-3 flex flex-col sm:flex-row justify-between gap-3">
         <input
           type="text"
-          placeholder="Search by email or activity type..."
-          className="w-full sm:w-80 px-4 py-2 text-sm border border-cp-neutral-200 rounded-md"
+          placeholder="Search by email..."
+          className="w-full sm:w-64 px-4 py-2 text-sm border border-cp-neutral-200 rounded-md"
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value);
             setCurrentPage(1);
           }}
         />
+        <Select value={activityType} onValueChange={(val) => {
+          setActivityType(val as ActivityType | 'all');
+          setCurrentPage(1);
+        }}>
+          <SelectTrigger className="w-full sm:w-64">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="paypal">PayPal</SelectItem>
+            <SelectItem value="reward">Reward</SelectItem>
+            <SelectItem value="redemption">Redemption</SelectItem>
+            <SelectItem value="donation">Donation</SelectItem>
+            <SelectItem value="purchase">Purchase</SelectItem>
+            <SelectItem value="transfer">Transfer</SelectItem>
+            <SelectItem value="gift">Gift</SelectItem>
+            <SelectItem value="card_load">Card Load</SelectItem>
+            <SelectItem value="ic_to_it">IC → IT</SelectItem>
+            <SelectItem value="withdrawal">Withdrawal</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           size="sm"
@@ -152,16 +170,14 @@ const CreditsList: React.FC = () => {
           </div>
         ) : (
           <div className="p-8 text-center text-cp-neutral-500">
-            <p>No credit activity found</p>
-            {searchQuery && (
-              <p className="text-sm mt-1">Try adjusting your search query</p>
-            )}
+            <p>No activity logs found</p>
+            {searchQuery && <p className="text-sm mt-1">Try adjusting your filters.</p>}
           </div>
         )}
       </div>
 
       {/* Pagination */}
-      {paginationEnabled && totalPages > 1 && (
+      {totalPages > 1 && (
         <div className="flex justify-center gap-2 py-4">
           <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
             Previous
