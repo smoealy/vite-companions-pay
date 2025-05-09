@@ -12,18 +12,23 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { refreshUserData, userData } = useUser();
   const [captured, setCaptured] = useState(false);
+  const [icBalance, setIcBalance] = useState<number | null>(null); // ✅ IC balance
 
-  const [balance, setBalance] = useState<number>(0); // ✅ NEW: balance state
-
+  // ✅ Fetch real-time IC balance
   useEffect(() => {
-    if (userData?.uid) {
-      getICBalance(userData.uid)
-        .then(setBalance)
-        .catch((err) => {
-          console.error('Error fetching balance:', err);
-        });
-    }
-  }, [userData?.uid]);
+    const fetchBalance = async () => {
+      if (userData?.uid) {
+        try {
+          const balance = await getICBalance(userData.uid);
+          setIcBalance(balance);
+        } catch (err) {
+          console.error('Error fetching IC balance:', err);
+        }
+      }
+    };
+
+    fetchBalance();
+  }, [userData]);
 
   useEffect(() => {
     const paypalStatus = searchParams.get('paypal');
@@ -50,7 +55,6 @@ const Dashboard = () => {
               description: `You added $${data.amount} in Ihram Credits.`,
             });
             refreshUserData();
-            getICBalance(userData.uid).then(setBalance); // ✅ REFRESH balance
           } else {
             toast({
               title: 'Payment Error',
@@ -82,15 +86,13 @@ const Dashboard = () => {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-cp-cream/30">
       <DashboardHeader />
       
-      {/* ✅ Optional Balance Display */}
-      <div className="text-center text-cp-green-700 font-semibold text-sm mt-2">
-        {userData?.uid && (
-          <p>
-            Ihram Credit Balance: <span className="font-bold">{balance.toLocaleString()} IC</span>
-          </p>
-        )}
-      </div>
-
+      {/* ✅ Display real-time IC balance */}
+      {icBalance !== null && (
+        <div className="text-center mt-4 text-cp-neutral-800 text-sm">
+          <span className="font-medium">Your Balance:</span> {icBalance.toLocaleString()} IC
+        </div>
+      )}
+      
       <DashboardContent />
       <Footer />
     </div>
