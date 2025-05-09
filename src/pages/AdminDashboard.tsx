@@ -1,21 +1,23 @@
+// File: src/pages/admin/AdminDashboard.tsx
+
 import React, { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminStats from '@/components/admin/AdminStats';
 import AdminTabContent from '@/components/admin/AdminTabContent';
 import RedemptionFilters from '@/components/admin/RedemptionFilters';
 import RedemptionsList from '@/components/admin/RedemptionsList';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Footer from '@/components/ui-components/Footer';
-import { CreditCard, Users, Coins, Settings, DollarSign } from 'lucide-react';
-import { getRedemptionStats, getUmrahRedemptions, UmrahRedemptionData } from '@/utils/firebase/redemptionService';
-
 import UsersList from '@/components/admin/UsersList';
 import TokenPurchasesList from '@/components/admin/TokenPurchasesList';
-import CreditsList from '@/components/admin/CreditsList'; // ✅ Add this import
+import CreditsList from '@/components/admin/CreditsList';
+import Footer from '@/components/ui-components/Footer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CreditCard, Users, Coins, Settings, DollarSign } from 'lucide-react';
+import { getRedemptionStats, UmrahRedemptionData } from '@/utils/firebase/redemptionService';
+import { listenToRedemptions } from '@/utils/firestoreService';
 
 type StatusFilterType = 'all' | 'pending' | 'reviewed' | 'contacted' | 'completed' | 'cancelled';
 
-const AdminDashboard = () => {
+const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('redemptions');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
@@ -32,37 +34,50 @@ const AdminDashboard = () => {
     cancelled: 0,
     bronze: 0,
     silver: 0,
-    gold: 0
+    gold: 0,
   });
   const [openSubmissionId, setOpenSubmissionId] = useState<string | null>(null);
 
   const countries = [
-    'United States', 'Saudi Arabia', 'United Kingdom', 'Canada',
-    'United Arab Emirates', 'Malaysia', 'Singapore', 'Indonesia'
+    'United States',
+    'Saudi Arabia',
+    'United Kingdom',
+    'Canada',
+    'United Arab Emirates',
+    'Malaysia',
+    'Singapore',
+    'Indonesia',
   ];
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchStats = async () => {
       try {
         setLoading(true);
         const redemptionStats = await getRedemptionStats();
         setStats(redemptionStats);
-
-        const filters: any = {};
-        if (statusFilter !== 'all') filters.status = statusFilter;
-        if (countryFilter !== 'all') filters.country = countryFilter;
-        if (searchQuery) filters.search = searchQuery;
-
-        const redemptions = await getUmrahRedemptions(filters);
-        setSubmissions(redemptions);
-      } catch (error) {
-        console.error("Error fetching admin data:", error);
+      } catch (err) {
+        console.error('Failed to load stats', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = listenToRedemptions((all: any[]) => {
+      const filtered = all.filter((item) => {
+        const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+        const matchesCountry = countryFilter === 'all' || item.country === countryFilter;
+        const matchesSearch = searchQuery === '' || item.email?.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesStatus && matchesCountry && matchesSearch;
+      });
+      setSubmissions(filtered);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [statusFilter, countryFilter, searchQuery]);
 
   const resetFilters = () => {
