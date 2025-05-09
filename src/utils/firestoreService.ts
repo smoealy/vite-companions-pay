@@ -174,6 +174,5 @@ export {
   logActivity,
   getUserActivities,
   logAdminAction,
-  getAllUsersWithBalances,
-  listenToTokenPurchases
+  getAllUsersWithBalances
 };
