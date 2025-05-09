@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -7,11 +6,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { UmrahRedemptionData } from '@/utils/firestoreService';
+import { UmrahRedemptionData, listenToRedemptions } from '@/utils/firestoreService';
 import RedemptionDetails from './RedemptionDetails';
+import { exportToCSV } from '@/utils/exportCSV';
 
 interface RedemptionsListProps {
-  submissions: Array<UmrahRedemptionData & { id: string }>;
   loading: boolean;
   statusFilter: string;
   countryFilter: string;
@@ -26,7 +25,6 @@ interface RedemptionsListProps {
 }
 
 const RedemptionsList = ({
-  submissions,
   loading,
   statusFilter,
   countryFilter,
@@ -39,6 +37,27 @@ const RedemptionsList = ({
   getStatusBadge,
   getTierBadge
 }: RedemptionsListProps) => {
+  const [submissions, setSubmissions] = useState<Array<UmrahRedemptionData & { id: string }>>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const perPage = 5;
+
+  useEffect(() => {
+    const unsubscribe = listenToRedemptions((data) => {
+      setSubmissions(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const filtered = submissions.filter((submission) => {
+    const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
+    const matchesCountry = !countryFilter || submission.formData.country.toLowerCase().includes(countryFilter.toLowerCase());
+    const matchesTier = !tierFilter || submission.tier === tierFilter;
+    const matchesSearch = !searchQuery || submission.formData.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesCountry && matchesTier && matchesSearch;
+  });
+
+  const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
+  const totalPages = Math.ceil(filtered.length / perPage);
 
   if (loading) {
     return (
@@ -52,7 +71,7 @@ const RedemptionsList = ({
     );
   }
 
-  if (submissions.length === 0) {
+  if (filtered.length === 0) {
     return (
       <div className="text-center py-10 border rounded-md bg-gray-50">
         <p className="text-cp-neutral-500">No submissions found matching the criteria</p>
@@ -71,7 +90,16 @@ const RedemptionsList = ({
 
   return (
     <div className="space-y-4">
-      {submissions.map((submission) => (
+      <div className="flex justify-between items-center pb-2">
+        <p className="text-sm text-cp-neutral-600">
+          Showing {paginated.length} of {filtered.length} results
+        </p>
+        <Button variant="outline" size="sm" onClick={() => exportToCSV(filtered, 'redemptions')}>
+          Export CSV
+        </Button>
+      </div>
+
+      {paginated.map((submission) => (
         <Collapsible
           key={submission.id}
           open={openSubmissionId === submission.id}
@@ -117,6 +145,18 @@ const RedemptionsList = ({
           </CollapsibleContent>
         </Collapsible>
       ))}
+
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 pt-4">
+          <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+            Previous
+          </Button>
+          <span className="text-sm font-medium px-2">Page {currentPage} of {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
