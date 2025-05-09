@@ -204,17 +204,23 @@ export const listenToTokenPurchases = (
   });
 };
 
-// ✅ Listen to Redemptions
+// ✅ Listen to Redemptions (Fixed: sorted & typed)
 export const listenToRedemptions = (
-  callback: (data: any[]) => void
+  callback: (data: Array<UmrahRedemptionData & { id: string }>) => void
 ): (() => void) => {
   const q = query(collection(db, 'redemptions'));
   return onSnapshot(q, (snapshot) => {
-    const redemptions = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    callback(redemptions);
+    const redemptions = snapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Array<UmrahRedemptionData & { id: string }>;
+
+    const sorted = redemptions.sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    callback(sorted);
   });
 };
 
