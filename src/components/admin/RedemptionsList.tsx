@@ -1,3 +1,5 @@
+// File: src/components/admin/RedemptionsList.tsx
+
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -6,9 +8,24 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { UmrahRedemptionData, listenToRedemptions } from '@/utils/firestoreService';
+import { listenToRedemptions } from '@/utils/firestoreService';
 import RedemptionDetails from './RedemptionDetails';
 import { exportToCSV } from '@/utils/exportCSV';
+
+interface FormData {
+  name: string;
+  email: string;
+  country: string;
+  [key: string]: any;
+}
+
+interface Redemption {
+  id: string;
+  formData: FormData;
+  tier: string;
+  status: string;
+  timestamp: string;
+}
 
 interface RedemptionsListProps {
   loading: boolean;
@@ -19,8 +36,8 @@ interface RedemptionsListProps {
   resetFilters: () => void;
   openSubmissionId: string | null;
   handleToggleSubmission: (id: string) => void;
-  handleViewDetails: (submission: UmrahRedemptionData & { id: string }) => void;
-  getStatusBadge: (status: UmrahRedemptionData['status']) => React.ReactNode;
+  handleViewDetails: (submission: Redemption) => void;
+  getStatusBadge: (status: string) => React.ReactNode;
   getTierBadge: (tier: string) => React.ReactNode;
 }
 
@@ -37,22 +54,25 @@ const RedemptionsList = ({
   getStatusBadge,
   getTierBadge
 }: RedemptionsListProps) => {
-  const [submissions, setSubmissions] = useState<Array<UmrahRedemptionData & { id: string }>>([]);
+  const [submissions, setSubmissions] = useState<Redemption[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const perPage = 5;
 
   useEffect(() => {
     const unsubscribe = listenToRedemptions((data) => {
-      setSubmissions(data);
+      const sorted = data
+        .filter(d => d.formData) // safety check
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setSubmissions(sorted);
     });
     return () => unsubscribe();
   }, []);
 
   const filtered = submissions.filter((submission) => {
     const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
-    const matchesCountry = !countryFilter || submission.formData.country.toLowerCase().includes(countryFilter.toLowerCase());
-    const matchesTier = !tierFilter || submission.tier === tierFilter;
-    const matchesSearch = !searchQuery || submission.formData.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCountry = countryFilter === 'all' || submission.formData?.country?.toLowerCase().includes(countryFilter.toLowerCase());
+    const matchesTier = tierFilter === 'all' || submission.tier === tierFilter;
+    const matchesSearch = !searchQuery || submission.formData?.name?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesCountry && matchesTier && matchesSearch;
   });
 
@@ -62,7 +82,7 @@ const RedemptionsList = ({
   if (loading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3, 4, 5].map((i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="flex gap-4">
             <Skeleton className="h-12 w-full" />
           </div>
@@ -75,12 +95,8 @@ const RedemptionsList = ({
     return (
       <div className="text-center py-10 border rounded-md bg-gray-50">
         <p className="text-cp-neutral-500">No submissions found matching the criteria</p>
-        {(statusFilter !== 'all' || countryFilter || tierFilter || searchQuery) && (
-          <Button 
-            variant="link" 
-            onClick={resetFilters}
-            className="mt-2"
-          >
+        {(statusFilter !== 'all' || countryFilter !== 'all' || tierFilter !== 'all' || searchQuery) && (
+          <Button variant="link" onClick={resetFilters} className="mt-2">
             Clear all filters
           </Button>
         )}
@@ -110,8 +126,8 @@ const RedemptionsList = ({
             <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
                 <div>
-                  <p className="font-medium">{submission.formData.name}</p>
-                  <p className="text-xs text-cp-neutral-500">{submission.formData.email}</p>
+                  <p className="font-medium">{submission.formData.name || 'Unnamed'}</p>
+                  <p className="text-xs text-cp-neutral-500">{submission.formData.email || 'No Email'}</p>
                 </div>
                 <div className="flex gap-2">
                   {getTierBadge(submission.tier)}
