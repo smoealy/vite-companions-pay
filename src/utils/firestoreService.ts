@@ -1,5 +1,3 @@
-
-ChatGPT said:
 // File: src/utils/firestoreService.ts
 
 import {
