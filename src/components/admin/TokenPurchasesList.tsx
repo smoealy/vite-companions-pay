@@ -29,7 +29,12 @@ const TokenPurchasesList: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = listenToTokenPurchases((data: TokenPurchase[]) => {
-      setPurchases(data);
+      const sorted = data.sort((a, b) => {
+        const dateA = a.timestamp.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+        const dateB = b.timestamp.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
+        return dateB.getTime() - dateA.getTime();
+      });
+      setPurchases(sorted);
       setIsLoading(false);
     });
     return () => unsubscribe();
@@ -59,8 +64,8 @@ const TokenPurchasesList: React.FC = () => {
 
   const filtered = purchases.filter(p =>
     (!searchQuery || p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     p.walletAddress?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     p.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      p.walletAddress?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase())) &&
     (statusFilter === 'all' || p.status.toLowerCase() === statusFilter) &&
     (methodFilter === 'all' || p.paymentMethod.toLowerCase() === methodFilter)
   );
@@ -68,7 +73,7 @@ const TokenPurchasesList: React.FC = () => {
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
-  const exportCSV = () => {
+  const handleExportCSV = () => {
     const headers = ['Date', 'Amount (USD)', 'Tokens', 'Email/Wallet', 'Method', 'Status'];
     const rows = filtered.map(p => [
       formatDate(p.timestamp),
@@ -106,7 +111,7 @@ const TokenPurchasesList: React.FC = () => {
             </SelectContent>
           </Select>
           <Select value={methodFilter} onValueChange={setMethodFilter}>
-            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Payment Method" /></SelectTrigger>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Method" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Methods</SelectItem>
               <SelectItem value="paypal">PayPal</SelectItem>
@@ -118,7 +123,7 @@ const TokenPurchasesList: React.FC = () => {
             variant="outline"
             size="sm"
             disabled={isLoading || filtered.length === 0}
-            onClick={exportCSV}
+            onClick={handleExportCSV}
             className="flex items-center gap-1"
           >
             <Download className="h-4 w-4" />
