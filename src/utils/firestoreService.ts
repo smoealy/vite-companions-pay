@@ -30,14 +30,17 @@ import {
   logAdminAction
 } from './firebase/activityService';
 
-// ✅ IC Activity Types
 export type ActivityType =
   | 'paypal'
   | 'reward'
   | 'redemption'
   | 'donation'
   | 'card_load'
-  | 'purchase';
+  | 'purchase'
+  | 'transfer'
+  | 'gift'
+  | 'ic_to_it'
+  | 'withdrawal';
 
 export interface ActivityLog {
   type: ActivityType;
@@ -54,15 +57,13 @@ export const getICBalance = async (uid: string): Promise<number> => {
 };
 
 // ✅ Deduct IC
-export const deductICBalance = async (
-  uid: string,
-  amount: number
-): Promise<void> => {
+export const deductICBalance = async (uid: string, amount: number): Promise<void> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) throw new Error('User not found');
   const currentBalance = userSnap.data().icBalance || 0;
   if (amount > currentBalance) throw new Error('Insufficient balance');
+
   await updateDoc(userRef, {
     icBalance: currentBalance - amount
   });
@@ -76,7 +77,37 @@ export const deductICBalance = async (
   await updateDoc(userRef, { icTransactions: txs });
 };
 
-// ✅ Get IC Transactions
+// ✅ Add Custom IC Transaction
+export const addICTransaction = async (
+  uid: string,
+  type: ActivityType,
+  amount: number
+): Promise<void> => {
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) throw new Error('User not found');
+  const currentBalance = userSnap.data().icBalance || 0;
+
+  const updatedBalance = type === 'withdrawal' || type === 'redemption' || type === 'transfer'
+    ? currentBalance - amount
+    : currentBalance + amount;
+
+  if (updatedBalance < 0) throw new Error('Insufficient balance');
+
+  const txs = userSnap.data().icTransactions || [];
+  txs.unshift({
+    type,
+    amount: type === 'withdrawal' || type === 'redemption' || type === 'transfer' ? -amount : amount,
+    timestamp: new Date().toISOString()
+  });
+
+  await updateDoc(userRef, {
+    icBalance: updatedBalance,
+    icTransactions: txs
+  });
+};
+
+// ✅ Get Transactions for a User
 export const getICTransactions = async (
   uid: string,
   limit: number = 10
@@ -95,7 +126,32 @@ export const getICTransactions = async (
     }));
 };
 
-// ✅ Update User Profile
+// ✅ Get All User Activity Logs
+export const getAllUserActivityLogs = async (): Promise<
+  Array<ActivityLog & { id: string; userId: string; email: string }>
+> => {
+  const usersRef = collection(db, 'users');
+  const snapshot = await getDocs(usersRef);
+
+  const logs: Array<ActivityLog & { id: string; userId: string; email: string }> = [];
+
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    const txs = data.icTransactions || [];
+    txs.forEach((tx: ActivityLog, i: number) => {
+      logs.push({
+        ...tx,
+        id: `${docSnap.id}-${i}`,
+        userId: docSnap.id,
+        email: data.email || '—'
+      });
+    });
+  });
+
+  return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+};
+
+// ✅ Update Profile
 export const updateUserProfile = async (
   uid: string | undefined,
   data: Partial<{ name: string; country: string; phone: string }>
@@ -145,7 +201,7 @@ export const listenToTokenPurchases = (
   });
 };
 
-// ✅ Listen to Umrah Redemptions — FIXED
+// ✅ Listen to Redemptions
 export const listenToRedemptions = (
   callback: (data: any[]) => void
 ): (() => void) => {
@@ -159,11 +215,11 @@ export const listenToRedemptions = (
   });
 };
 
-// 🔁 Re-export types
+// 🔁 Re-export Types
 export type { UmrahRedemptionData } from './firebase/redemptionService';
 export type { ActivityLog as LoggedActivity, ActivityType as LoggedActivityType } from './firebase/activityService';
 
-// 🔁 Re-export all other services
+// 🔁 Re-export All Services
 export {
   getUserData,
   updateUserData,
@@ -177,3 +233,4 @@ export {
   getUserActivities,
   logAdminAction
 };
+
