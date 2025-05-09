@@ -5,19 +5,37 @@ import { useUser } from '@/contexts/UserContext';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DashboardContent from '@/components/dashboard/DashboardContent';
 import Footer from '@/components/ui-components/Footer';
+import { getICBalance } from '@/utils/firestoreService';
 
 const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { refreshUserData, userData } = useUser();
-  const [captured, setCaptured] = useState(false); // NEW
+  const [captured, setCaptured] = useState(false);
+  const [icBalance, setIcBalance] = useState<number | null>(null); // ✅ IC balance
+
+  // ✅ Fetch real-time IC balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (userData?.uid) {
+        try {
+          const balance = await getICBalance(userData.uid);
+          setIcBalance(balance);
+        } catch (err) {
+          console.error('Error fetching IC balance:', err);
+        }
+      }
+    };
+
+    fetchBalance();
+  }, [userData]);
 
   useEffect(() => {
     const paypalStatus = searchParams.get('paypal');
     const orderId = searchParams.get('token');
 
     if (!captured && paypalStatus === 'success' && orderId && userData?.uid) {
-      setCaptured(true); // prevent refiring
+      setCaptured(true);
 
       toast({
         title: 'Finalizing Payment...',
@@ -43,7 +61,7 @@ const Dashboard = () => {
               description: data.error || 'Unable to finalize PayPal payment.',
               variant: 'destructive',
             });
-            setCaptured(false); // allow retry if error
+            setCaptured(false);
           }
         })
         .catch((err) => {
@@ -67,6 +85,14 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-cp-cream/30">
       <DashboardHeader />
+      
+      {/* ✅ Display real-time IC balance */}
+      {icBalance !== null && (
+        <div className="text-center mt-4 text-cp-neutral-800 text-sm">
+          <span className="font-medium">Your Balance:</span> {icBalance.toLocaleString()} IC
+        </div>
+      )}
+      
       <DashboardContent />
       <Footer />
     </div>
@@ -74,4 +100,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

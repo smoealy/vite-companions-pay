@@ -1,6 +1,3 @@
-// This file now just re-exports everything from the refactored modules
-// to maintain backward compatibility with existing imports
-
 import { 
   getUserData,
   updateUserData,
@@ -21,11 +18,10 @@ import {
   logAdminAction
 } from './firebase/activityService';
 
-// ✅ NEW: Import firebase directly to fetch icTransactions and update user profile
-import { getDoc, doc, setDoc } from 'firebase/firestore';
+import { getDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
-// ✅ NEW: Define IC activity types
+// ✅ IC Activity Types
 export type ActivityType = 
   | 'paypal'
   | 'reward'
@@ -40,7 +36,43 @@ export interface ActivityLog {
   timestamp: string;
 }
 
-// ✅ NEW: Get IC top-ups directly from Firestore
+// ✅ Get IC Balance
+export const getICBalance = async (uid: string): Promise<number> => {
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) return 0;
+  return userSnap.data().icBalance || 0;
+};
+
+// ✅ Deduct IC (Used during redemption)
+export const deductICBalance = async (uid: string, amount: number): Promise<void> => {
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+
+  if (!userSnap.exists()) throw new Error('User not found');
+
+  const currentBalance = userSnap.data().icBalance || 0;
+  if (amount > currentBalance) throw new Error('Insufficient balance');
+
+  await updateDoc(userRef, {
+    icBalance: currentBalance - amount
+  });
+
+  // Optionally log the transaction
+  const txs = userSnap.data().icTransactions || [];
+  txs.unshift({
+    type: 'redemption',
+    amount: -amount,
+    timestamp: new Date().toISOString()
+  });
+
+  await updateDoc(userRef, {
+    icTransactions: txs
+  });
+};
+
+// ✅ Get IC Transaction History
 export const getICTransactions = async (
   uid: string,
   limit: number = 10
@@ -62,7 +94,7 @@ export const getICTransactions = async (
     }));
 };
 
-// ✅ NEW: Update user profile fields (name, country, phone)
+// ✅ Update User Profile Info
 export const updateUserProfile = async (
   uid: string | undefined,
   data: Partial<{ name: string; country: string; phone: string }>
@@ -76,7 +108,7 @@ export const updateUserProfile = async (
 export type { UmrahRedemptionData } from './firebase/redemptionService';
 export type { ActivityLog as LoggedActivity, ActivityType as LoggedActivityType } from './firebase/activityService';
 
-// 🔁 Re-export all other services (without duplicating getICTransactions)
+// 🔁 Re-export all other services
 export {
   getUserData,
   updateUserData,
