@@ -1,10 +1,11 @@
-
 import React, { useEffect, useState } from 'react';
 import { useUser } from "@/contexts/UserContext";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import PassportUploader from './PassportUploader';
+import { getDoc, doc } from "firebase/firestore";
+import { db } from "@/firebaseConfig";
 
 interface RedemptionFormProps {
   selectedTier: string;
@@ -23,6 +24,13 @@ interface FormData {
   madinahNights: number;
 }
 
+const localTierCostMap: Record<string, number> = {
+  "Bronze": 500,
+  "Silver": 1000,
+  "Gold": 2000,
+  "Platinum": 5000
+};
+
 const RedemptionForm: React.FC<RedemptionFormProps> = ({
   selectedTier,
   temporaryRedemptionId,
@@ -39,9 +47,10 @@ const RedemptionForm: React.FC<RedemptionFormProps> = ({
     madinahNights: 1
   });
   const [passportFileUrl, setPassportFileUrl] = useState<string>('');
+  const [userBalance, setUserBalance] = useState<number>(0);
+  const [error, setError] = useState<string>('');
   const { user, userData } = useUser();
-  
-  // Prefill form data from user context when available
+
   useEffect(() => {
     if (user && userData) {
       setFormData(prev => ({
@@ -51,7 +60,21 @@ const RedemptionForm: React.FC<RedemptionFormProps> = ({
       }));
     }
   }, [user, userData]);
-  
+
+  // 🔁 Fetch balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!user) return;
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setUserBalance(data.icBalance || 0);
+      }
+    };
+    fetchBalance();
+  }, [user]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setFormData(prev => ({
@@ -59,12 +82,18 @@ const RedemptionForm: React.FC<RedemptionFormProps> = ({
       [id]: value
     }));
   };
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const tierCost = localTierCostMap[selectedTier] || 0;
+    if (userBalance < tierCost) {
+      setError(`You only have ${userBalance} IC. This tier requires ${tierCost} IC.`);
+      return;
+    }
+    setError('');
     onSubmit(e, formData, passportFileUrl);
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4">
@@ -129,8 +158,7 @@ const RedemptionForm: React.FC<RedemptionFormProps> = ({
             />
           </div>
         </div>
-        
-        {/* Passport/Photo Upload Component */}
+
         {user && temporaryRedemptionId && (
           <div className="space-y-2 pt-2">
             <Label htmlFor="passport">Upload Passport/Photo ID</Label>
@@ -141,7 +169,14 @@ const RedemptionForm: React.FC<RedemptionFormProps> = ({
             />
           </div>
         )}
+
+        {error && (
+          <div className="text-red-600 text-sm pt-1">
+            {error}
+          </div>
+        )}
       </div>
+
       <div className="flex justify-end gap-4 pt-4">
         <Button variant="outline" type="button" onClick={onCancel}>
           Cancel
