@@ -1,3 +1,6 @@
+import { getDoc, getDocs, doc, setDoc, updateDoc, collection } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
+
 import { 
   getUserData,
   updateUserData,
@@ -18,9 +21,6 @@ import {
   logAdminAction
 } from './firebase/activityService';
 
-import { getDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
-
 // ✅ IC Activity Types
 export type ActivityType = 
   | 'paypal'
@@ -40,7 +40,6 @@ export interface ActivityLog {
 export const getICBalance = async (uid: string): Promise<number> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
-
   if (!userSnap.exists()) return 0;
   return userSnap.data().icBalance || 0;
 };
@@ -49,9 +48,7 @@ export const getICBalance = async (uid: string): Promise<number> => {
 export const deductICBalance = async (uid: string, amount: number): Promise<void> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
-
   if (!userSnap.exists()) throw new Error('User not found');
-
   const currentBalance = userSnap.data().icBalance || 0;
   if (amount > currentBalance) throw new Error('Insufficient balance');
 
@@ -59,7 +56,7 @@ export const deductICBalance = async (uid: string, amount: number): Promise<void
     icBalance: currentBalance - amount
   });
 
-  // Optionally log the transaction
+  // Log the transaction
   const txs = userSnap.data().icTransactions || [];
   txs.unshift({
     type: 'redemption',
@@ -79,7 +76,6 @@ export const getICTransactions = async (
 ): Promise<Array<ActivityLog & { id: string }>> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
-
   if (!userSnap.exists()) return [];
 
   const data = userSnap.data();
@@ -104,6 +100,44 @@ export const updateUserProfile = async (
   await setDoc(userRef, data, { merge: true });
 };
 
+// ✅ Get All Users With IC Balances
+export const getAllUsersWithBalances = async (): Promise<
+  Array<{
+    id: string;
+    email?: string;
+    wallet?: string;
+    role?: string;
+    createdAt?: any;
+    balance: number;
+  }>
+> => {
+  const usersRef = collection(db, 'users');
+  const querySnap = await getDocs(usersRef);
+
+  const users: Array<{
+    id: string;
+    email?: string;
+    wallet?: string;
+    role?: string;
+    createdAt?: any;
+    balance: number;
+  }> = [];
+
+  querySnap.forEach((docSnap) => {
+    const data = docSnap.data();
+    users.push({
+      id: docSnap.id,
+      email: data.email || '',
+      wallet: data.walletAddress || '',
+      role: data.role || 'user',
+      createdAt: data.createdAt || null,
+      balance: data.icBalance || 0
+    });
+  });
+
+  return users;
+};
+
 // 🔁 Re-export types
 export type { UmrahRedemptionData } from './firebase/redemptionService';
 export type { ActivityLog as LoggedActivity, ActivityType as LoggedActivityType } from './firebase/activityService';
@@ -114,13 +148,12 @@ export {
   updateUserData,
   incrementBalance,
   getAdminUsers,
-
   submitUmrahRedemption,
   getUmrahRedemptions,
   updateRedemptionStatus,
   getRedemptionStats,
-
   logActivity,
   getUserActivities,
-  logAdminAction
+  logAdminAction,
+  getAllUsersWithBalances
 };
