@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Search, X, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -42,6 +41,7 @@ const RedemptionFilters = ({
 }: RedemptionFiltersProps) => {
   return (
     <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+      {/* Search Input */}
       <div className="relative flex-grow max-w-md">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-cp-neutral-400" />
         <Input
@@ -51,7 +51,10 @@ const RedemptionFilters = ({
           className="pl-9"
         />
       </div>
+
+      {/* Filters */}
       <div className="flex flex-wrap gap-2">
+        {/* Status Filter */}
         <Select
           value={statusFilter}
           onValueChange={(value: StatusFilterType) => setStatusFilter(value)}
@@ -68,10 +71,11 @@ const RedemptionFilters = ({
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
-        
+
+        {/* Tier Filter */}
         <Select
           value={tierFilter}
-          onValueChange={setTierFilter}
+          onValueChange={(value) => setTierFilter(value)}
         >
           <SelectTrigger className="w-[120px]">
             <SelectValue placeholder="Filter by tier" />
@@ -83,10 +87,11 @@ const RedemptionFilters = ({
             <SelectItem value="gold">Gold</SelectItem>
           </SelectContent>
         </Select>
-        
+
+        {/* Country Filter */}
         <Select
           value={countryFilter}
-          onValueChange={setCountryFilter}
+          onValueChange={(value) => setCountryFilter(value)}
         >
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Filter by country" />
@@ -98,16 +103,24 @@ const RedemptionFilters = ({
             ))}
           </SelectContent>
         </Select>
-        
-        <Button 
-          variant="outline" 
+
+        {/* Clear Filters */}
+        <Button
+          variant="outline"
           size="icon"
-          onClick={resetFilters}
-          title="Clear filters"
+          title="Clear all filters"
+          onClick={() => {
+            setSearchQuery('');
+            setStatusFilter('all');
+            setTierFilter('all');
+            setCountryFilter('all');
+            resetFilters(); // optional if external logic needed
+          }}
         >
           <X size={16} />
         </Button>
-        
+
+        {/* Export CSV */}
         <Button
           variant="outline"
           size="icon"
