@@ -9,14 +9,12 @@ interface UserData {
   uid: string;
   email: string | null;
   displayName: string | null;
-  createdAt: any; // Firebase Timestamp
+  createdAt: any;
   onboarded: boolean;
   balance: number;
   isAdmin: boolean;
   mode: UserMode;
   photoURL?: string;
-
-  // ✅ NEW FIELDS:
   icBalance?: number;
   icTransactions?: {
     type: string;
@@ -63,13 +61,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      
+
       if (currentUser) {
         try {
           const userDoc = await createUserDocIfNeeded(currentUser);
-          setUserData(userDoc);
-          setMode(userDoc?.mode || 'web2');
-          setIsAdmin(userDoc?.isAdmin || false);
+          const enrichedUserData = { ...userDoc, uid: currentUser.uid } as UserData;
+          setUserData(enrichedUserData);
+          setMode(enrichedUserData?.mode || 'web2');
+          setIsAdmin(enrichedUserData?.isAdmin || false);
         } catch (error) {
           console.error("Error setting up user:", error);
           setMode('web2');
@@ -80,17 +79,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         setMode('web2');
         setIsAdmin(false);
       }
-      
+
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
-  
+
   const createUserDocIfNeeded = async (user: User) => {
     const userRef = doc(db, 'users', user.uid);
     const userDoc = await getDoc(userRef);
-    
+
     if (!userDoc.exists()) {
       const newUserData = {
         uid: user.uid,
@@ -109,7 +108,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       return { ...newUserData, createdAt: new Date() };
     }
 
-    return userDoc.data() as UserData;
+    return { ...userDoc.data(), uid: user.uid } as UserData;
   };
 
   const updateUserData = async (data: Partial<UserData>) => {
@@ -134,11 +133,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const userDoc = await getDoc(userRef);
 
       if (userDoc.exists()) {
-        const userData = userDoc.data() as UserData;
-        setUserData(userData);
-        setMode(userData?.mode || 'web2');
-        setIsAdmin(userData?.isAdmin || false);
-        return userData;
+        const data = userDoc.data();
+        const enrichedUserData = { ...data, uid: user.uid } as UserData;
+        setUserData(enrichedUserData);
+        setMode(enrichedUserData?.mode || 'web2');
+        setIsAdmin(enrichedUserData?.isAdmin || false);
+        return enrichedUserData;
       } else {
         const newUserData = await createUserDocIfNeeded(user);
         return newUserData;
@@ -157,13 +157,13 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   };
 
   return (
-    <UserContext.Provider value={{ 
-      user, 
+    <UserContext.Provider value={{
+      user,
       userData,
-      loading, 
-      mode, 
-      setUserMode, 
-      isAdmin, 
+      loading,
+      mode,
+      setUserMode,
+      isAdmin,
       updateUserData,
       refreshUserData
     }}>
