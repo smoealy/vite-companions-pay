@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
 import { getICBalance } from '@/utils/firestoreService';
+import { auth } from '@/firebaseConfig'; // ✅ fallback support
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DashboardContent from '@/components/dashboard/DashboardContent';
 import Footer from '@/components/ui-components/Footer';
@@ -17,17 +18,23 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchBalance = async () => {
-      if (userData?.uid) {
-        try {
-          const balance = await getICBalance(userData.uid);
-          setIcBalance(balance);
-        } catch (err) {
-          console.error('Error fetching IC balance:', err);
-        }
+      const uid = userData?.uid || auth.currentUser?.uid;
+      if (!uid) return;
+
+      try {
+        const balance = await getICBalance(uid);
+        console.log('✅ IC Balance for', uid, ':', balance); // Debug log
+        setIcBalance(balance);
+      } catch (err) {
+        console.error('❌ Error fetching IC balance:', err);
       }
     };
 
     fetchBalance();
+  }, [userData]);
+
+  useEffect(() => {
+    console.log('👤 userData:', userData); // ✅ context debug
   }, [userData]);
 
   useEffect(() => {
