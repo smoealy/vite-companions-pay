@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import DailyCheckIn from '@/components/DailyCheckIn';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
