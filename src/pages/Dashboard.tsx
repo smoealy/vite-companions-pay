@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import DailyCheckIn from '@/components/DailyCheckIn';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/contexts/UserContext';
+import { getICBalance } from '@/utils/firestoreService';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import DashboardContent from '@/components/dashboard/DashboardContent';
 import Footer from '@/components/ui-components/Footer';
-import { getICBalance } from '@/utils/firestoreService';
+import DailyCheckIn from '@/components/DailyCheckIn';
 
 const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { refreshUserData, userData } = useUser();
   const [captured, setCaptured] = useState(false);
-  const [icBalance, setIcBalance] = useState<number | null>(null); // ✅ IC balance
+  const [icBalance, setIcBalance] = useState<number | null>(null);
 
-  // ✅ Fetch real-time IC balance
   useEffect(() => {
     const fetchBalance = async () => {
       if (userData?.uid) {
@@ -86,15 +85,20 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-white to-cp-cream/30">
       <DashboardHeader />
-      
-      {/* ✅ Display real-time IC balance */}
+
       {icBalance !== null && (
-        <div className="text-center mt-4 text-cp-neutral-800 text-sm">
-          <span className="font-medium">Your Balance:</span> {icBalance.toLocaleString()} IC
+        <div className="mx-auto mt-6 max-w-sm rounded-xl border bg-white p-4 shadow">
+          <div className="text-center text-cp-neutral-800">
+            <div className="text-sm">Your Balance</div>
+            <div className="text-2xl font-bold">
+              {icBalance.toLocaleString()} Ihram Credits
+            </div>
+          </div>
         </div>
       )}
-      
+
       <DashboardContent />
+      <DailyCheckIn />
       <Footer />
     </div>
   );
