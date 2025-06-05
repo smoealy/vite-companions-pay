@@ -24,13 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const { orderId, userId } = req.body;
-
   if (!orderId || !userId) {
     return res.status(400).json({ error: 'Missing orderId or userId' });
   }
 
   try {
-    // 1. Get PayPal Access Token
+    // 1. Authenticate with PayPal
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -39,15 +38,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: 'grant_type=client_credentials',
     });
-
     const tokenData = await tokenRes.json();
     const access_token = tokenData.access_token;
+    if (!access_token) return res.status(500).json({ error: 'PayPal auth failed' });
 
-    if (!access_token) {
-      return res.status(500).json({ error: 'Unable to authenticate with PayPal' });
-    }
-
-    // 2. Capture Payment
+    // 2. Capture payment
     const captureRes = await fetch(`${BASE_URL}/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       headers: {
@@ -55,41 +50,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'Content-Type': 'application/json',
       },
     });
-
     const captureData = await captureRes.json();
-
     if (!captureRes.ok) {
-      console.error('PayPal capture failed:', captureData);
+      console.error('PayPal capture error:', captureData);
       return res.status(500).json({ error: 'Capture failed', details: captureData });
     }
 
     const amountCaptured = parseFloat(
       captureData?.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || '0'
     );
-
     if (!amountCaptured || isNaN(amountCaptured)) {
-      return res.status(400).json({ error: 'Invalid capture amount from PayPal' });
+      return res.status(400).json({ error: 'Invalid capture amount' });
     }
 
-    // 3. Prevent Duplicate
+    // 3. Update user balance
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
-
-    if (!userDoc.exists) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!userDoc.exists) return res.status(404).json({ error: 'User not found' });
 
     const userData = userDoc.data()!;
     const transactions = userData.icTransactions || [];
 
-    const alreadyCaptured = transactions.some(
+    const isDuplicate = transactions.some(
       (tx: any) =>
-        tx.type === 'paypal' &&
-        tx.amount === amountCaptured &&
-        tx.status === 'completed'
+        tx.type === 'paypal' && tx.amount === amountCaptured && tx.status === 'completed'
     );
-
-    if (alreadyCaptured) {
+    if (isDuplicate) {
       return res.status(200).json({
         success: true,
         message: 'Already captured',
@@ -97,24 +83,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 4. Update balance and transaction status
     const updatedTransactions = transactions.map((tx: any) => {
-      if (
-        tx.type === 'paypal' &&
-        tx.amount === amountCaptured &&
-        tx.status === 'pending'
-      ) {
+      if (tx.type === 'paypal' && tx.amount === amountCaptured && tx.status === 'pending') {
         return { ...tx, status: 'completed' };
       }
       return tx;
     });
 
-    // ✅ Fallback: append new completed transaction if no match found
     const hasCompleted = updatedTransactions.some(
       (tx: any) =>
-        tx.type === 'paypal' &&
-        tx.amount === amountCaptured &&
-        tx.status === 'completed'
+        tx.type === 'paypal' && tx.amount === amountCaptured && tx.status === 'completed'
     );
 
     if (!hasCompleted) {
@@ -136,7 +114,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       { merge: true }
     );
 
-    // 5. Add activity log
+    // 4. Log activity
     await db.collection('activity_logs').add({
       uid: userId,
       type: 'paypal',
@@ -155,3 +133,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ success: false, error: 'Something went wrong during capture.' });
   }
 }
+
