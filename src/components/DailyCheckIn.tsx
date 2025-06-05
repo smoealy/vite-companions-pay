@@ -21,12 +21,15 @@ const DailyCheckIn = () => {
   useEffect(() => {
     const checkEligibility = async () => {
       if (!user) return;
-      const userRef = doc(db, 'users', user.uid);
-      const snap = await getDoc(userRef);
-      const lastCheckIn = snap.data()?.lastCheckIn;
-      const today = new Date().toISOString().split('T')[0];
 
-      if (lastCheckIn !== today) {
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      const data = userSnap.data();
+
+      const lastCheckIn = data?.lastCheckIn?.toDate?.() || null;
+      const now = new Date();
+
+      if (!lastCheckIn || now.getTime() - lastCheckIn.getTime() > 24 * 60 * 60 * 1000) {
         setShowPopup(true);
       }
     };
@@ -38,24 +41,43 @@ const DailyCheckIn = () => {
     if (!user) return;
     setLoading(true);
 
-    const today = new Date().toISOString().split('T')[0];
     const userRef = doc(db, 'users', user.uid);
-    const snap = await getDoc(userRef);
-    const userData = snap.data();
-    const currentBalance = userData?.icBalance ?? 0;
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.data() || {};
 
-    // Update user
+    const currentBalance = userData.icBalance ?? 0;
+    const lastCheckIn = userData.lastCheckIn?.toDate?.() || null;
+    const now = new Date();
+
+    // Handle streak logic
+    let newStreak = (userData.checkInStreak ?? 0);
+    if (lastCheckIn) {
+      const diff = now.getTime() - lastCheckIn.getTime();
+      if (diff < 48 * 60 * 60 * 1000 && diff > 24 * 60 * 60 * 1000) {
+        newStreak += 1;
+      } else if (diff <= 24 * 60 * 60 * 1000) {
+        newStreak = userData.checkInStreak ?? 1; // already claimed today
+      } else {
+        newStreak = 1; // reset
+      }
+    } else {
+      newStreak = 1;
+    }
+
+    // Update balance and metadata
     await updateDoc(userRef, {
       icBalance: currentBalance + 1,
-      lastCheckIn: today,
+      lastCheckIn: Timestamp.now(),
+      checkInStreak: newStreak,
     });
 
     // Log activity
     await addDoc(collection(db, 'activity_logs'), {
       uid: user.uid,
-      type: 'checkin',
+      type: 'daily_checkin',
       amount: 1,
       timestamp: Timestamp.now(),
+      description: 'Daily Check-In Reward',
     });
 
     toast({ title: '✅ +1 Ihram Credit earned!' });
@@ -69,7 +91,7 @@ const DailyCheckIn = () => {
     <div className="fixed bottom-4 right-4 z-50 w-[300px] rounded-xl border bg-white p-4 shadow-lg">
       <h3 className="font-semibold text-lg mb-2">Daily Check-In</h3>
       <p className="text-sm text-muted-foreground mb-3">
-        Click below to earn 1 Ihram Credit today.
+        Come back every 24 hours to earn 1 Ihram Credit.
       </p>
       <Button onClick={handleCheckIn} disabled={loading} className="w-full">
         {loading ? 'Checking in...' : '+1 IC Today'}
@@ -79,3 +101,4 @@ const DailyCheckIn = () => {
 };
 
 export default DailyCheckIn;
+
