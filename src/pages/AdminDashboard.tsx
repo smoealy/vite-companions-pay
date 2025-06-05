@@ -12,8 +12,8 @@ import CreditsList from '@/components/admin/CreditsList';
 import Footer from '@/components/ui-components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreditCard, Users, Coins, Settings, DollarSign } from 'lucide-react';
-import { getRedemptionStats, UmrahRedemptionData } from '@/utils/firebase/redemptionService';
 import { listenToRedemptions } from '@/utils/firestoreService';
+import { UmrahRedemptionData } from '@/utils/firebase/redemptionService';
 
 type StatusFilterType = 'all' | 'pending' | 'reviewed' | 'contacted' | 'completed' | 'cancelled';
 
@@ -50,22 +50,6 @@ const AdminDashboard: React.FC = () => {
   ];
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setLoading(true);
-        const redemptionStats = await getRedemptionStats();
-        setStats(redemptionStats);
-      } catch (err) {
-        console.error('Failed to load stats', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
-
-  useEffect(() => {
     const unsubscribe = listenToRedemptions((all: any[]) => {
       const filtered = all.filter((item) => {
         const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
@@ -73,7 +57,22 @@ const AdminDashboard: React.FC = () => {
         const matchesSearch = searchQuery === '' || item.email?.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesStatus && matchesCountry && matchesSearch;
       });
+
       setSubmissions(filtered);
+
+      const liveStats = {
+        total: all.length,
+        pending: all.filter(r => r.status === 'pending').length,
+        reviewed: all.filter(r => r.status === 'reviewed').length,
+        contacted: all.filter(r => r.status === 'contacted').length,
+        completed: all.filter(r => r.status === 'fulfilled').length,
+        cancelled: all.filter(r => r.status === 'cancelled').length,
+        bronze: all.filter(r => r.tier === 'bronze').length,
+        silver: all.filter(r => r.tier === 'silver').length,
+        gold: all.filter(r => r.tier === 'gold').length,
+      };
+
+      setStats(liveStats);
       setLoading(false);
     });
 
