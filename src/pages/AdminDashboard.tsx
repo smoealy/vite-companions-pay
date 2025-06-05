@@ -1,4 +1,4 @@
-// File: src/pages/admin/AdminDashboard.tsx
+// File: src/pages/AdminDashboard.tsx
 
 import React, { useState, useEffect } from 'react';
 import AdminHeader from '@/components/admin/AdminHeader';
