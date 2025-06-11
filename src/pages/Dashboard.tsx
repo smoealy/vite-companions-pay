@@ -23,7 +23,9 @@ const Dashboard = () => {
 
       try {
         const balance = await getICBalance(uid);
-        console.log('✅ IC Balance for', uid, ':', balance); // Debug log
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ IC Balance for', uid, ':', balance);
+        }
         setIcBalance(balance);
       } catch (err) {
         console.error('❌ Error fetching IC balance:', err);
@@ -34,7 +36,9 @@ const Dashboard = () => {
   }, [userData]);
 
   useEffect(() => {
-    console.log('👤 userData:', userData); // ✅ context debug
+    if (process.env.NODE_ENV === 'development') {
+      console.log('👤 userData:', userData);
+    }
   }, [userData]);
 
   useEffect(() => {

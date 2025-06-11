@@ -37,9 +37,13 @@ export default function TestWalletIntegration() {
     setError(null);
     
     try {
-      console.log("Checking balance for:", address);
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Checking balance for:", address);
+      }
       const balanceResult = await getIHRAMBalance(address as string);
-      console.log("Balance result:", balanceResult);
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Balance result:", balanceResult);
+      }
       setBalance(balanceResult);
       toast({
         title: "Balance retrieved",

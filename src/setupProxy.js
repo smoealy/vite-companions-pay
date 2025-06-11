@@ -2,7 +2,9 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 module.exports = function(app) {
-  console.log("Setting up API proxy middleware for development");
+  if (process.env.NODE_ENV === 'development') {
+    console.log("Setting up API proxy middleware for development");
+  }
   
   // Define the target API server - this should point to your deployed API or local API server
   const apiTarget = process.env.API_URL || 'https://ihram-journey-wallet-api.vercel.app';
@@ -18,7 +20,9 @@ module.exports = function(app) {
       logLevel: 'debug',
       onProxyReq: (proxyReq, req, res) => {
         // Log the outgoing request
-        console.log(`Proxying request: ${req.method} ${req.path} to ${apiTarget}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Proxying request: ${req.method} ${req.path} to ${apiTarget}`);
+        }
         
         // Handle JSON body for POST/PUT requests
         if (req.body && (req.method === 'POST' || req.method === 'PUT')) {
@@ -30,7 +34,9 @@ module.exports = function(app) {
         }
       },
       onProxyRes: function(proxyRes, req, res) {
-        console.log('PROXY RES:', proxyRes.statusCode, req.url);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('PROXY RES:', proxyRes.statusCode, req.url);
+        }
       }
     })
   );

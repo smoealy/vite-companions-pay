@@ -6,7 +6,8 @@ import {
   updateDoc,
   collection,
   onSnapshot,
-  query
+  query,
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
@@ -48,7 +49,7 @@ export type ActivityType =
 export interface ActivityLog {
   type: ActivityType;
   amount: number;
-  timestamp: string;
+  timestamp: any;
 }
 
 // ✅ Get IC Balance
@@ -77,7 +78,7 @@ export const deductICBalance = async (uid: string, amount: number): Promise<void
   txs.unshift({
     type: 'redemption',
     amount: -amount,
-    timestamp: new Date().toISOString()
+    timestamp: serverTimestamp()
   });
   await updateDoc(userRef, { icTransactions: txs });
 };
@@ -101,7 +102,7 @@ export const addICTransaction = async (
   txs.unshift({
     type,
     amount: isNegative ? -amount : amount,
-    timestamp: new Date().toISOString()
+    timestamp: serverTimestamp()
   });
 
   await updateDoc(userRef, {

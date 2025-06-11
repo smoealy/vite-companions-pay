@@ -65,19 +65,23 @@ export function useWeb3TokenPurchase(refreshBalance: () => Promise<void>) {
       // Get current round details to check minimum contribution
       const sale = new ethers.Contract(TOKEN_SALE_ADDRESS, TOKEN_SALE_ABI, signer);
       
-      console.log("Fetching current round details...");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Fetching current round details...");
+      }
       const roundDetails = await sale.getCurrentRound();
       const rate = Number(roundDetails.rate);
       setCurrentRate(rate);
       
-      console.log("Current sale round:", {
-        active: roundDetails.active,
-        rate: rate.toString(),
-        minContribution: ethers.utils.formatEther(roundDetails.minContribution) + " ETH",
-        maxContribution: ethers.utils.formatEther(roundDetails.maxContribution) + " ETH",
-        cap: ethers.utils.formatEther(roundDetails.cap) + " ETH",
-        raised: ethers.utils.formatEther(roundDetails.raised) + " ETH"
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Current sale round:", {
+          active: roundDetails.active,
+          rate: rate.toString(),
+          minContribution: ethers.utils.formatEther(roundDetails.minContribution) + " ETH",
+          maxContribution: ethers.utils.formatEther(roundDetails.maxContribution) + " ETH",
+          cap: ethers.utils.formatEther(roundDetails.cap) + " ETH",
+          raised: ethers.utils.formatEther(roundDetails.raised) + " ETH"
+        });
+      }
       
       // Convert input ETH string to wei BigNumber
       const ethValueInWei = ethers.utils.parseEther(ethAmount);
@@ -85,15 +89,17 @@ export function useWeb3TokenPurchase(refreshBalance: () => Promise<void>) {
       // Debug wallet info
       const address = await signer.getAddress();
       const ethBalance = await provider.getBalance(address);
-      console.log("Buyer wallet:", {
-        address,
-        ethBalance: ethers.utils.formatEther(ethBalance) + " ETH",
-        sendingWei: ethValueInWei.toString(),
-        sendingEth: ethers.utils.formatEther(ethValueInWei) + " ETH",
-        rate: rate,
-        estimatedTokens: parseFloat(ethAmount) * rate,
-        separatorAddress: SEPARATOR_ADDRESS
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Buyer wallet:", {
+          address,
+          ethBalance: ethers.utils.formatEther(ethBalance) + " ETH",
+          sendingWei: ethValueInWei.toString(),
+          sendingEth: ethers.utils.formatEther(ethValueInWei) + " ETH",
+          rate: rate,
+          estimatedTokens: parseFloat(ethAmount) * rate,
+          separatorAddress: SEPARATOR_ADDRESS
+        });
+      }
       
       // Check min contribution directly from the contract
       if (ethValueInWei.lt(roundDetails.minContribution)) {
@@ -124,17 +130,23 @@ export function useWeb3TokenPurchase(refreshBalance: () => Promise<void>) {
       }
       
       // Use a direct contract call
-      console.log("Calling buyTokens() with value:", ethers.utils.formatEther(ethValueInWei), "ETH");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Calling buyTokens() with value:", ethers.utils.formatEther(ethValueInWei), "ETH");
+      }
       const transaction = await sale.buyTokens({ 
         value: ethValueInWei,
         gasLimit: 150000 // Increased gas limit to account for ETH forwarding
       });
       
-      console.log("Transaction sent:", transaction.hash);
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Transaction sent:", transaction.hash);
+      }
       
       // Wait for transaction confirmation
       const receipt = await transaction.wait();
-      console.log("Transaction confirmed:", receipt);
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Transaction confirmed:", receipt);
+      }
       
       // Check if transaction was successful
       if (receipt.status === 0) {

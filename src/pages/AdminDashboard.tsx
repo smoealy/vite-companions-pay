@@ -87,7 +87,9 @@ const AdminDashboard: React.FC = () => {
   };
 
   const exportToCSV = () => {
-    console.log('Export to CSV');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Export to CSV');
+    }
   };
 
   const handleToggleSubmission = (id: string) => {
@@ -95,7 +97,9 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleViewDetails = (submission: UmrahRedemptionData & { id: string }) => {
-    console.log("View details for:", submission);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("View details for:", submission);
+    }
   };
 
   const getStatusBadge = (status: UmrahRedemptionData['status']) => (
