@@ -117,7 +117,7 @@ export const updateRedemptionStatus = async (
   
   if (adminData) {
     updateData.reviewedBy = adminData.adminId;
-    updateData.reviewedAt = Timestamp.now();
+    updateData.reviewedAt = serverTimestamp();
     
     if (adminData.notes) {
       updateData.adminNotes = adminData.notes;

@@ -26,7 +26,9 @@ export async function getIHRAMBalance(walletAddress: string): Promise<string> {
   // For TypeScript safety, we check if window.ethereum exists
   if (typeof window.ethereum !== 'undefined') {
     try {
-      console.log("Fetching IHRAM balance for wallet:", walletAddress);
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Fetching IHRAM balance for wallet:", walletAddress);
+      }
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const contract = new ethers.Contract(tokenAddress, tokenABI, provider);
       
@@ -34,13 +36,19 @@ export async function getIHRAMBalance(walletAddress: string): Promise<string> {
       let decimals = 18;
       try {
         decimals = await contract.decimals();
-        console.log("IHRAM token decimals:", decimals);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("IHRAM token decimals:", decimals);
+        }
       } catch (error) {
-        console.log("Could not fetch token decimals, using default 18");
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Could not fetch token decimals, using default 18");
+        }
       }
       
       const balance = await contract.balanceOf(walletAddress);
-      console.log("Raw IHRAM balance fetched:", balance.toString());
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Raw IHRAM balance fetched:", balance.toString());
+      }
       return ethers.utils.formatUnits(balance, decimals);
     } catch (error) {
       console.error("Error getting IHRAM balance from walletUtils:", error);
@@ -48,7 +56,9 @@ export async function getIHRAMBalance(walletAddress: string): Promise<string> {
     }
   }
   // Return "0" as fallback if ethereum is not available
-  console.log("Ethereum provider not available in walletUtils");
+  if (process.env.NODE_ENV === 'development') {
+    console.log("Ethereum provider not available in walletUtils");
+  }
   return "0";
 }
 
