@@ -11,6 +11,7 @@ export const checkSaleRequirements = async (signer: ethers.Signer, ethValueInWei
     
     // Get current round details
     const round = await sale.getCurrentRound();
+if (process.env.NODE_ENV === "development") {
     console.log("Current Sale Round:", {
       active: round.active,
       rate: round.rate.toString(),
@@ -21,6 +22,7 @@ export const checkSaleRequirements = async (signer: ethers.Signer, ethValueInWei
       separatorAddress: SEPARATOR_ADDRESS
     });
     
+}
     // Check if round is active
     if (!round.active) {
       return { valid: false, reason: "Sale round is not currently active" };

@@ -1,6 +1,6 @@
 
 import { db } from './firebaseConfig';
-import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, serverTimestamp } from "firebase/firestore";
 
 export async function logRedemption(data: any) {
   await addDoc(collection(db, "redemptions"), data);
@@ -27,7 +27,9 @@ export async function sendConfirmationEmail(data: {
   fileURL?: string | null;
 }) {
   // Log the email details for now - would integrate with real service later
-  console.log("Sending confirmation email:", data);
+  if (process.env.NODE_ENV === 'development') {
+    console.log("Sending confirmation email:", data);
+  }
   
   // In a real implementation, this would call EmailJS or Firebase Extensions Email
   await addDoc(collection(db, "emailNotifications"), {
@@ -40,7 +42,7 @@ export async function sendConfirmationEmail(data: {
       responseTime: "48 hours",
       hasPassport: data.fileURL ? true : false
     },
-    timestamp: new Date().toISOString()
+    timestamp: serverTimestamp()
   });
   
   return true;

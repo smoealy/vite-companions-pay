@@ -60,14 +60,14 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
         }),
       });
 
-      const text = await res.text(); // read raw response
+      const text = await res.text();
       if (!res.ok) {
         throw new Error(`Unexpected response from server: ${text}`);
       }
 
       let data;
       try {
-        data = JSON.parse(text); // safely parse
+        data = JSON.parse(text);
       } catch (err) {
         throw new Error("Invalid response format from server.");
       }
@@ -81,7 +81,6 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
         description: "Please complete your payment in the new tab.",
       });
 
-      // ✅ Redirect without using window.open or window.close
       window.location.href = data.approvalUrl;
     } catch (error: any) {
       console.error("PayPal Error:", error);
@@ -134,7 +133,7 @@ const TopUpModal = ({ open, onOpenChange }: TopUpModalProps) => {
                   onClick={() => setAmount(value)}
                   className="w-full"
                 >
-                  ${value}
+                  {`$${value}`}
                 </Button>
               ))}
             </div>

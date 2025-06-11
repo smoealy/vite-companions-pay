@@ -1,5 +1,3 @@
-// File: src/utils/firestoreService.ts
-
 import {
   getDoc,
   getDocs,
@@ -8,7 +6,8 @@ import {
   updateDoc,
   collection,
   onSnapshot,
-  query
+  query,
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
@@ -50,7 +49,7 @@ export type ActivityType =
 export interface ActivityLog {
   type: ActivityType;
   amount: number;
-  timestamp: string;
+  timestamp: any;
 }
 
 // ✅ Get IC Balance
@@ -58,7 +57,9 @@ export const getICBalance = async (uid: string): Promise<number> => {
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) return 0;
-  return userSnap.data().icBalance || 0;
+
+  const data = userSnap.data();
+  return data.icBalance ?? data.balance ?? 0;
 };
 
 // ✅ Deduct IC
@@ -66,7 +67,7 @@ export const deductICBalance = async (uid: string, amount: number): Promise<void
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) throw new Error('User not found');
-  const currentBalance = userSnap.data().icBalance || 0;
+  const currentBalance = userSnap.data().icBalance ?? userSnap.data().balance ?? 0;
   if (amount > currentBalance) throw new Error('Insufficient balance');
 
   await updateDoc(userRef, {
@@ -77,7 +78,7 @@ export const deductICBalance = async (uid: string, amount: number): Promise<void
   txs.unshift({
     type: 'redemption',
     amount: -amount,
-    timestamp: new Date().toISOString()
+    timestamp: serverTimestamp()
   });
   await updateDoc(userRef, { icTransactions: txs });
 };
@@ -91,7 +92,7 @@ export const addICTransaction = async (
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) throw new Error('User not found');
-  const currentBalance = userSnap.data().icBalance || 0;
+  const currentBalance = userSnap.data().icBalance ?? userSnap.data().balance ?? 0;
 
   const isNegative = ['withdrawal', 'redemption', 'transfer'].includes(type);
   const updatedBalance = isNegative ? currentBalance - amount : currentBalance + amount;
@@ -101,7 +102,7 @@ export const addICTransaction = async (
   txs.unshift({
     type,
     amount: isNegative ? -amount : amount,
-    timestamp: new Date().toISOString()
+    timestamp: serverTimestamp()
   });
 
   await updateDoc(userRef, {
@@ -185,7 +186,7 @@ export const getAllUsersWithBalances = async (): Promise<
       wallet: data.walletAddress || '',
       role: data.role || 'user',
       createdAt: data.createdAt || null,
-      balance: data.icBalance || 0
+      balance: data.icBalance ?? data.balance ?? 0
     };
   });
 };

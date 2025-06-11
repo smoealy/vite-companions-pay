@@ -16,15 +16,22 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from "@/contexts/UserContext";
 import { signOut } from '../auth';
-import { getICTransactions, updateUserProfile } from '@/utils/firestoreService';
+import { getICTransactions, updateUserProfile, ActivityType } from '@/utils/firestoreService';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { userData, user, refreshUserData } = useUser();
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [transactions, setTransactions] = useState<any[]>([]);
+const { toast } = useToast();
+const { userData, user, refreshUserData } = useUser();
+const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+const [isLoggingOut, setIsLoggingOut] = useState(false);
+ interface Transaction {
+   id: string;
+   type: ActivityType;
+   amount: number;
+   timestamp: any;
+   description?: string;
+ }
+ const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
