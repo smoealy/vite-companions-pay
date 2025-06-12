@@ -7,7 +7,8 @@ import {
   collection,
   onSnapshot,
   query,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
@@ -78,7 +79,7 @@ export const deductICBalance = async (uid: string, amount: number): Promise<void
   txs.unshift({
     type: 'redemption',
     amount: -amount,
-    timestamp: serverTimestamp()
+    timestamp: Timestamp.now()
   });
   await updateDoc(userRef, { icTransactions: txs });
 };
@@ -102,7 +103,7 @@ export const addICTransaction = async (
   txs.unshift({
     type,
     amount: isNegative ? -amount : amount,
-    timestamp: serverTimestamp()
+    timestamp: Timestamp.now()
   });
 
   await updateDoc(userRef, {
