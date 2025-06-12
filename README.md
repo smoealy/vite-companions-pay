@@ -58,3 +58,13 @@ npm install
 # Run the app
 npm run dev
 
+
+
+
+
+🔒 License
+This codebase is proprietary and owned by Companions Pay.
+Please see the LICENSE file for usage restrictions.
+
+🙏 Built for Barakah. Designed to uplift.
+Made with love to help Muslims earn rewards for both Dunya and Akhirah.
