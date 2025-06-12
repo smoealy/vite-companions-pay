@@ -1,74 +1,60 @@
-# Welcome to your Lovable project
+# Companions Pay – Impact Wallet & Umrah Rewards Platform
 
-## Project info
+Companions Pay is a purpose-driven financial app built for Muslims saving toward Umrah and Hajj. It allows users to top up with real money, earn Ihram Credits (IC), and redeem for faith-based goals or spiritual impact actions — like planting trees in Madinah, gifting Qurans, or sponsoring Umrah for others.
 
-**URL**: https://lovable.dev/projects/3e88b6b2-69b1-4761-bd5f-9b71d98ec6c8
+---
 
-## How can I edit this code?
+## 🌐 Project URL
 
-There are several ways of editing your application.
+**Live app:** [https://vite-companions-pay.vercel.app](https://vite-companions-pay.vercel.app)
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/3e88b6b2-69b1-4761-bd5f-9b71d98ec6c8) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
+## 🔧 Tech Stack
 
 This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Vite** (Frontend bundler)
+- **React** (UI library)
+- **TypeScript** (type safety)
+- **Tailwind CSS** (styling)
+- **shadcn/ui** (components)
+- **Firebase** (Auth, Firestore, Functions)
+- **Vercel** (Hosting + serverless functions)
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/3e88b6b2-69b1-4761-bd5f-9b71d98ec6c8) and click on Share -> Publish.
+## 🧠 Key Features
 
-## Can I connect a custom domain to my Lovable project?
+- 🔐 Google and email-based Firebase Auth
+- 💸 PayPal integration for IC top-ups
+- 🕋 Redeem IC for Umrah deposits or good deeds
+- 📈 Admin dashboard for redemptions, top-ups, and activity logs
+- 🧾 Activity-based spiritual impact tracking
+- 🔁 Daily check-in rewards
+- 💬 Planned AI agent integration (Flowise-ready)
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📁 Local Development
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
-\n## License\n\nAll rights reserved. The contents of this repository are proprietary to Companions Pay. See [LICENSE](LICENSE) for details.
+> ⚠️ Only needed if you're running locally (not required for Vercel deployments)
+
+### Prerequisites
+
+- Node.js + npm
+- Firebase project with Web app enabled
+
+### Setup
+
+```bash
+# Clone the repo
+git clone <your-git-url>
+cd companions-pay
+
+# Install dependencies
+npm install
+
+# Run the app
+npm run dev
+
