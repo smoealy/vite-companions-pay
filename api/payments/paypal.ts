@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Get PayPal Access Token
+    // ✅ Step 1: Get PayPal Access Token
     const tokenRes = await fetch(`${BASE_URL}/v1/oauth2/token`, {
       method: 'POST',
       headers: {
@@ -40,10 +40,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: 'grant_type=client_credentials',
     });
 
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      console.error('❌ PayPal Token Fetch Failed:', errText);
+      return res.status(500).json({ error: 'PayPal token request failed' });
+    }
+
     const tokenData = await tokenRes.json();
     const access_token = tokenData.access_token;
 
-    // Create PayPal Order
+    // ✅ Step 2: Create PayPal Order
     const orderRes = await fetch(`${BASE_URL}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
@@ -69,31 +75,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     const orderData = await orderRes.json();
-    const approvalUrl = orderData.links?.find((l: any) => l.rel === 'approve')?.href;
+    console.log('🧾 PayPal Order Response:', JSON.stringify(orderData, null, 2));
 
+    const approvalUrl = orderData.links?.find((l: any) => l.rel === 'approve')?.href;
     if (!approvalUrl) {
       return res.status(500).json({ error: 'No approval URL found from PayPal.' });
     }
 
-    // Log transaction in Firestore
-    const userRef = db.collection('users').doc(userId);
-    await userRef.set(
-      {
-        icTransactions: [
-          {
-            type: 'paypal',
-            amount: parseFloat(amount),
-            timestamp: FieldValue.serverTimestamp(),
-            status: 'pending',
-          },
-        ],
-      },
-      { merge: true }
-    );
+    // ✅ Step 3: Log in Firestore
+    try {
+      const userRef = db.collection('users').doc(userId);
+      await userRef.set(
+        {
+          icTransactions: [
+            {
+              type: 'paypal',
+              amount: parseFloat(amount),
+              timestamp: FieldValue.serverTimestamp(),
+              status: 'pending',
+            },
+          ],
+        },
+        { merge: true }
+      );
+    } catch (firestoreErr) {
+      console.error('❌ Firestore Logging Error:', firestoreErr);
+      // Don't fail the request if Firestore logging fails
+    }
 
     return res.status(200).json({ approvalUrl });
-  } catch (error) {
-    console.error('PayPal error:', error);
-    return res.status(500).json({ error: 'PayPal integration failed.' });
+  } catch (error: any) {
+    console.error('❌ PayPal Integration Error:', error?.response?.data || error.message || error);
+    return res.status(500).json({ error: 'PayPal integration failed.', details: error.message });
   }
 }
