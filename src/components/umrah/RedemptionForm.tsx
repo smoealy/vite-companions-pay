@@ -25,10 +25,9 @@ interface FormData {
 }
 
 const localTierCostMap: Record<string, number> = {
-  "Bronze": 500,
-  "Silver": 1000,
-  "Gold": 2000,
-  "Platinum": 5000
+  bronze: 1250,
+  silver: 2500,
+  gold: 5000
 };
 
 const RedemptionForm: React.FC<RedemptionFormProps> = ({
@@ -50,6 +49,10 @@ const RedemptionForm: React.FC<RedemptionFormProps> = ({
   const [userBalance, setUserBalance] = useState<number>(0);
   const [error, setError] = useState<string>('');
   const { user, userData } = useUser();
+
+  useEffect(() => {
+    setError('');
+  }, [temporaryRedemptionId]);
 
   useEffect(() => {
     if (user && userData) {

@@ -9,6 +9,7 @@ import RedemptionsList from '@/components/admin/RedemptionsList';
 import UsersList from '@/components/admin/UsersList';
 import TokenPurchasesList from '@/components/admin/TokenPurchasesList';
 import CreditsList from '@/components/admin/CreditsList';
+import ImpactLogsList from '@/components/admin/ImpactLogsList';
 import Footer from '@/components/ui-components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreditCard, Users, Coins, Settings, DollarSign } from 'lucide-react';
@@ -120,7 +121,7 @@ const AdminDashboard: React.FC = () => {
 
         <div className="mt-8 bg-white rounded-lg shadow-sm border border-cp-neutral-200">
           <Tabs defaultValue="redemptions" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-5 h-auto p-0 bg-cp-neutral-100">
+          <TabsList className="grid grid-cols-6 h-auto p-0 bg-cp-neutral-100">
               <TabsTrigger value="redemptions" className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0">
                 <CreditCard className="h-4 w-4 mr-2" /> Redemptions
               </TabsTrigger>
@@ -132,6 +133,9 @@ const AdminDashboard: React.FC = () => {
               </TabsTrigger>
               <TabsTrigger value="credits" className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0">
                 <DollarSign className="h-4 w-4 mr-2" /> Ihram Credits
+              </TabsTrigger>
+              <TabsTrigger value="impact" className="data-[state=active]:bg-white rounded-none py-3 border-r border-cp-neutral-200 data-[state=active]:border-b-0">
+                <Coins className="h-4 w-4 mr-2" /> Impact
               </TabsTrigger>
               <TabsTrigger value="settings" className="data-[state=active]:bg-white rounded-none py-3 data-[state=active]:border-b-0">
                 <Settings className="h-4 w-4 mr-2" /> Settings
@@ -185,6 +189,12 @@ const AdminDashboard: React.FC = () => {
             <TabsContent value="credits">
               <div className="p-4">
                 <CreditsList />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="impact">
+              <div className="p-4">
+                <ImpactLogsList />
               </div>
             </TabsContent>
 
