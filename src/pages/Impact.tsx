@@ -6,7 +6,7 @@ import {
   TreePalm,
   Droplet,
   Book,
-  Wheelchair,
+  Accessibility,
   UserCheck,
   Sheep,
   ChevronLeft
@@ -26,7 +26,7 @@ const ACTIONS = {
   tree: { label: 'Plant a Tree (Madinah)', cost: 250, Icon: TreePalm },
   water: { label: 'Gift Water (in Haram)', cost: 150, Icon: Droplet },
   quran: { label: 'Gift a Quran', cost: 500, Icon: Book },
-  wheelchair: { label: 'Donate a Wheelchair', cost: 1000, Icon: Wheelchair },
+  wheelchair: { label: 'Donate a Wheelchair', cost: 1000, Icon: Accessibility },
   badal: { label: 'Perform Umrah Badal', cost: 5000, Icon: UserCheck },
   qurbani: { label: 'Sacrifice / Qurbani', cost: 3500, Icon: Sheep }
 } as const;
