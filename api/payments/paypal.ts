@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 // ✅ Firebase Admin SDK Init
 if (!getApps().length) {
@@ -91,7 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             {
               type: 'paypal',
               amount: parseFloat(amount),
-              timestamp: FieldValue.serverTimestamp(),
+              timestamp: Timestamp.now(),
               status: 'pending',
             },
           ],
