@@ -34,6 +34,12 @@ import {
   ActivityLog as LoggedActivity,
   ActivityType as LoggedActivityType
 } from './firebase/activityService';
+import {
+  logImpactAction,
+  listenToImpactLogs,
+  ImpactLog,
+  ImpactAction
+} from './firebase/impactService';
 
 export type ActivityType =
   | 'paypal'
@@ -229,6 +235,7 @@ export const listenToRedemptions = (
 // 🔁 Re-export Types
 export type { UmrahRedemptionData };
 export type { LoggedActivity, LoggedActivityType };
+export type { ImpactLog, ImpactAction };
 
 // 🔁 Re-export All Services
 export {
@@ -243,4 +250,6 @@ export {
   logActivity,
   getUserActivities,
   logAdminAction
+  , logImpactAction
+  , listenToImpactLogs
 };
