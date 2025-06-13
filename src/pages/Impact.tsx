@@ -42,7 +42,11 @@ const Impact = () => {
 
   const handleRedeem = async (action: ActionKey) => {
     if (!user) {
-      toast({ title: 'Sign In Required', description: 'Please log in first', variant: 'destructive' });
+      toast({
+        title: 'Sign In Required',
+        description: 'Please log in first',
+        variant: 'destructive'
+      });
       navigate('/login');
       return;
     }
@@ -52,8 +56,11 @@ const Impact = () => {
       const cost = ACTIONS[action].cost;
       const balance = await getICBalance(user.uid);
       if (balance < cost) {
-        toast({ title: 'Insufficient Balance', description: `You need ${cost} IC but only have ${balance} IC.`, variant: 'destructive' });
-        setSubmitting(false);
+        toast({
+          title: 'Insufficient Balance',
+          description: `You need ${cost} IC but only have ${balance} IC.`,
+          variant: 'destructive'
+        });
         return;
       }
 
@@ -65,11 +72,19 @@ const Impact = () => {
         amount: cost,
         timestamp: new Date()
       });
+
       await refreshUserData();
-      toast({ title: 'Redemption Successful', description: `Thank you for your contribution!` });
+      toast({
+        title: 'Redemption Successful',
+        description: 'Thank you for your contribution!'
+      });
     } catch (err) {
       console.error(err);
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Something went wrong',
+        variant: 'destructive'
+      });
     } finally {
       setSubmitting(false);
       setSelected(null);
@@ -123,8 +138,14 @@ const Impact = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setSelected(null)}>Cancel</Button>
-                <Button disabled={submitting} onClick={() => handleRedeem(selected!)} className="gradient-green">
+                <Button variant="outline" onClick={() => setSelected(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  disabled={submitting}
+                  onClick={() => handleRedeem(selected!)}
+                  className="gradient-green"
+                >
                   {submitting ? 'Processing...' : 'Confirm'}
                 </Button>
               </div>
