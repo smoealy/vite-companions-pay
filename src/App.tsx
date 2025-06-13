@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import BuyTokens from "./pages/BuyTokens";
 import RedeemUmrah from "./pages/RedeemUmrah";
+import Impact from "./pages/Impact";
 import AiAssistant from "./pages/AiAssistant";
 import SukukInvestment from "./pages/SukukInvestment";
 import Card from "./pages/Card";
@@ -102,6 +103,7 @@ const App = () => {
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/redeem" element={<ProtectedRoute><RedeemUmrah /></ProtectedRoute>} />
+            <Route path="/impact" element={<ProtectedRoute><Impact /></ProtectedRoute>} />
             <Route path="/ai-assistant" element={<ProtectedRoute><AiAssistant /></ProtectedRoute>} />
             <Route path="/card" element={<ProtectedRoute><Card /></ProtectedRoute>} />
             <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
