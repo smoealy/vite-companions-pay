@@ -7,7 +7,8 @@ import {
   collection,
   onSnapshot,
   query,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
@@ -67,20 +68,23 @@ export const deductICBalance = async (uid: string, amount: number): Promise<void
   const userRef = doc(db, 'users', uid);
   const userSnap = await getDoc(userRef);
   if (!userSnap.exists()) throw new Error('User not found');
-  const currentBalance = userSnap.data().icBalance ?? userSnap.data().balance ?? 0;
+
+  const userData = userSnap.data();
+  const currentBalance = userData.icBalance ?? userData.balance ?? 0;
   if (amount > currentBalance) throw new Error('Insufficient balance');
 
-  await updateDoc(userRef, {
-    icBalance: currentBalance - amount
-  });
-
-  const txs = userSnap.data().icTransactions || [];
+  const newBalance = currentBalance - amount;
+  const txs = userData.icTransactions || [];
   txs.unshift({
     type: 'redemption',
     amount: -amount,
-    timestamp: serverTimestamp()
+    timestamp: Timestamp.now(),
   });
-  await updateDoc(userRef, { icTransactions: txs });
+
+  await updateDoc(userRef, {
+    icBalance: newBalance,
+    icTransactions: txs,
+  });
 };
 
 // ✅ Add Custom IC Transaction
@@ -102,7 +106,7 @@ export const addICTransaction = async (
   txs.unshift({
     type,
     amount: isNegative ? -amount : amount,
-    timestamp: serverTimestamp()
+    timestamp: Timestamp.now()
   });
 
   await updateDoc(userRef, {
