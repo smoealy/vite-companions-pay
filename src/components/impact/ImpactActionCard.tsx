@@ -10,11 +10,16 @@ interface ImpactActionCardProps {
   onRedeem: () => void;
 }
 
-const ImpactActionCard: React.FC<ImpactActionCardProps> = ({ label, cost, Icon, onRedeem }) => {
+const ImpactActionCard: React.FC<ImpactActionCardProps> = ({
+  label,
+  cost,
+  Icon,
+  onRedeem
+}) => {
   return (
-    <Card className="p-4 flex flex-col items-center text-center shadow-sm border-cp-neutral-100">
-      <div className="rounded-full p-3 mb-2 bg-gradient-to-br from-cp-green-500 to-cp-green-700 text-white shadow">
-        <Icon size={20} />
+    <Card className="p-6 flex flex-col items-center text-center shadow-sm border-cp-neutral-100 hover:shadow-md transition">
+      <div className="rounded-full p-4 mb-3 bg-gradient-to-br from-cp-green-500 to-cp-green-700 text-white shadow">
+        <Icon size={24} />
       </div>
       <div className="text-sm font-medium text-cp-neutral-800">{label}</div>
       <div className="text-xs text-cp-neutral-500 mb-4">{cost.toLocaleString()} IC</div>

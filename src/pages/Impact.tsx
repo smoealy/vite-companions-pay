@@ -93,6 +93,9 @@ const Impact = () => {
       </div>
 
       <div className="p-6 max-w-2xl mx-auto">
+        <p className="text-center text-sm text-cp-neutral-600 mb-6">
+          Redeem your Ihram Credits for meaningful acts of charity.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {(Object.keys(ACTIONS) as ActionKey[]).map(key => {
             const { label, cost, Icon } = ACTIONS[key];
