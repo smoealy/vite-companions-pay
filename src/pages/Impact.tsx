@@ -8,7 +8,7 @@ import {
   Book,
   Accessibility,
   UserCheck,
-  Sheep,
+  Gift,
   ChevronLeft
 } from 'lucide-react';
 import {
@@ -28,7 +28,7 @@ const ACTIONS = {
   quran: { label: 'Gift a Quran', cost: 500, Icon: Book },
   wheelchair: { label: 'Donate a Wheelchair', cost: 1000, Icon: Accessibility },
   badal: { label: 'Perform Umrah Badal', cost: 5000, Icon: UserCheck },
-  qurbani: { label: 'Sacrifice / Qurbani', cost: 3500, Icon: Sheep }
+  qurbani: { label: 'Sacrifice / Qurbani', cost: 3500, Icon: Gift }
 } as const;
 
 type ActionKey = keyof typeof ACTIONS;
