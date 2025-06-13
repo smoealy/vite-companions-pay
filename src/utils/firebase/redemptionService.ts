@@ -8,9 +8,8 @@ import {
   updateDoc, 
   query, 
   where, 
-  serverTimestamp, 
-  orderBy,
   Timestamp,
+  orderBy,
   limit
 } from 'firebase/firestore';
 
@@ -41,7 +40,7 @@ export const submitUmrahRedemption = async (data: Omit<UmrahRedemptionData, 'sta
   const submissionData = {
     ...data,
     status: 'pending' as const,
-    createdAt: serverTimestamp()
+    createdAt: Timestamp.now()
   };
   
   // Create document with user ID path
@@ -117,7 +116,7 @@ export const updateRedemptionStatus = async (
   
   if (adminData) {
     updateData.reviewedBy = adminData.adminId;
-    updateData.reviewedAt = serverTimestamp();
+    updateData.reviewedAt = Timestamp.now();
     
     if (adminData.notes) {
       updateData.adminNotes = adminData.notes;

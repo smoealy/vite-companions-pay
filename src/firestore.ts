@@ -1,6 +1,6 @@
 
 import { db } from './firebaseConfig';
-import { collection, addDoc, getDocs, query, where, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where, Timestamp } from "firebase/firestore";
 
 export async function logRedemption(data: any) {
   await addDoc(collection(db, "redemptions"), data);
@@ -42,7 +42,7 @@ export async function sendConfirmationEmail(data: {
       responseTime: "48 hours",
       hasPassport: data.fileURL ? true : false
     },
-    timestamp: serverTimestamp()
+    timestamp: Timestamp.now()
   });
   
   return true;

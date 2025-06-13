@@ -1,6 +1,6 @@
 
 import { db } from '@/firebaseConfig';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
 
 type ActivityType = 'redemption' | 'donation' | 'reward' | 'purchase' | 'card_load';
 
@@ -15,7 +15,7 @@ export const logActivity = async (data: ActivityLogData): Promise<void> => {
   try {
     await addDoc(collection(db, 'activity_logs'), {
       ...data,
-      timestamp: serverTimestamp()
+      timestamp: Timestamp.now()
     });
   } catch (error) {
     console.error("Error logging activity:", error);
