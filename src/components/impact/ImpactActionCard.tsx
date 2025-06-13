@@ -17,9 +17,9 @@ const ImpactActionCard: React.FC<ImpactActionCardProps> = ({
   onRedeem
 }) => {
   return (
-    <Card className="p-6 flex flex-col items-center text-center shadow-sm border-cp-neutral-100 hover:shadow-md transition">
+    <Card className="p-6 flex flex-col items-center text-center rounded-lg shadow-sm border-cp-neutral-100 hover:shadow-lg transition hover:-translate-y-1">
       <div className="rounded-full p-4 mb-3 bg-gradient-to-br from-cp-green-500 to-cp-green-700 text-white shadow">
-        <Icon size={24} />
+        <Icon size={32} />
       </div>
       <div className="text-sm font-medium text-cp-neutral-800">{label}</div>
       <div className="text-xs text-cp-neutral-500 mb-4">{cost.toLocaleString()} IC</div>
