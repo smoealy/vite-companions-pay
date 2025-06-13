@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from "@/contexts/UserContext";
 import { submitUmrahRedemption } from '@/utils/firebase/redemptionService';
 import { sendConfirmationEmail } from '@/firestore';
-import { logActivity, getICBalance, deductICBalance } from '@/utils/firestoreService';
+import { logActivity, getICBalance, deductICBalance, incrementBalance } from '@/utils/firestoreService';
 import TierPackages from '@/components/umrah/TierPackages';
 import RedemptionForm from '@/components/umrah/RedemptionForm';
 
@@ -129,6 +129,13 @@ const RedeemUmrah = () => {
       navigate('/dashboard');
     } catch (error) {
       console.error("Error submitting redemption:", error);
+      if (user) {
+        try {
+          await incrementBalance(user.uid, TIER_PRICES[selectedTier] ?? 0);
+        } catch (refundErr) {
+          console.error("Error refunding balance:", refundErr);
+        }
+      }
       toast({
         title: "Error Submitting Redemption",
         description: "Please try again later.",

@@ -1,10 +1,10 @@
 
 import { db } from '@/firebaseConfig';
-import { 
-  collection, 
-  addDoc, 
-  serverTimestamp, 
-  query, 
+import {
+  collection,
+  addDoc,
+  Timestamp,
+  query,
   where, 
   orderBy, 
   limit,
@@ -26,7 +26,7 @@ export const logActivity = async (data: ActivityLog): Promise<void> => {
   try {
     await addDoc(collection(db, 'activity_logs'), {
       ...data,
-      timestamp: data.timestamp || serverTimestamp()
+      timestamp: data.timestamp || Timestamp.now()
     });
   } catch (error) {
     console.error("Error logging activity:", error);
@@ -67,7 +67,7 @@ export const logAdminAction = async (adminUid: string, action: string, details: 
       adminUid,
       action,
       details,
-      timestamp: serverTimestamp()
+      timestamp: Timestamp.now()
     });
   } catch (error) {
     console.error("Error logging admin action:", error);

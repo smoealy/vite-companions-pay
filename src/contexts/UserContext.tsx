@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db, storage } from "@/firebaseConfig";
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 
 type UserMode = 'web2' | 'web3';
@@ -95,7 +95,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         uid: user.uid,
         email: user.email,
         displayName: user.displayName,
-        createdAt: serverTimestamp(),
+        createdAt: Timestamp.now(),
         onboarded: false,
         mode: 'web2' as UserMode,
         balance: 0,

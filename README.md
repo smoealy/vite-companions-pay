@@ -31,6 +31,7 @@ This project is built with:
 - 🕋 Redeem IC for Umrah deposits or good deeds
 - 📈 Admin dashboard for redemptions, top-ups, and activity logs
 - 🧾 Activity-based spiritual impact tracking
+- 🔄 Firestore transactions use `Timestamp.now()` to avoid invalid server timestamps in arrays
 - 🔁 Daily check-in rewards
 - 💬 Planned AI agent integration (Flowise-ready)
 

@@ -8,7 +8,6 @@ import {
   collection,
   addDoc,
   Timestamp,
-  serverTimestamp,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -68,7 +67,7 @@ const DailyCheckIn = () => {
     // Update balance and metadata
     await updateDoc(userRef, {
       icBalance: currentBalance + 1,
-      lastCheckIn: serverTimestamp(),
+      lastCheckIn: Timestamp.now(),
       checkInStreak: newStreak,
     });
 
@@ -77,7 +76,7 @@ const DailyCheckIn = () => {
       uid: user.uid,
       type: 'daily_checkin',
       amount: 1,
-      timestamp: serverTimestamp(),
+      timestamp: Timestamp.now(),
       description: 'Daily Check-In Reward',
     });
 

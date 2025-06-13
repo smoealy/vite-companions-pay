@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import fetch from 'node-fetch';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 if (!getApps().length) {
   initializeApp({
@@ -100,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         type: 'paypal',
         amount: amountCaptured,
         status: 'completed',
-        timestamp: FieldValue.serverTimestamp(),
+        timestamp: Timestamp.now(),
       });
     }
 
@@ -119,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       uid: userId,
       type: 'paypal',
       amount: amountCaptured,
-      timestamp: FieldValue.serverTimestamp(),
+      timestamp: Timestamp.now(),
       description: 'Top-up via PayPal',
     });
 
